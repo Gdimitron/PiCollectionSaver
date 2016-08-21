@@ -15,7 +15,7 @@ Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
     : m_strDestDir(strDestDir), m_log(log), m_DB(NULL), m_httpDwnld(NULL),
       m_serPicDwnld(NULL, log, fileSavedClbk)
 {
-    m_PlugLib.setFileName(QString("./libPiCollection%1.so").arg(type));
+    m_PlugLib.setFileName(QString("../libPiCollection%1.so").arg(type));
     if (!m_PlugLib.load()) {
         m_log->LogOut("Failed to load lib " + m_PlugLib.fileName() +  ". Error:"
                       + m_PlugLib.errorString());
