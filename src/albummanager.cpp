@@ -11,7 +11,7 @@
 QSharedPointer<IAlbmMngr> IAlbmMngrCtr(
         ISite *pSite, IMainLog *pLog, const QString &strFolder,
         const QString &strUserId,
-        const QSharedPointer<IHtmlPageElm> &htmlElmUserMain,
+        const std::shared_ptr<IHtmlPageElm> &htmlElmUserMain,
         HttpDownloader &pHttpDown)
 {
     QSharedPointer<IAlbmMngr> retVal(new AlbumManager(pSite, pLog, strFolder,
@@ -23,7 +23,7 @@ QSharedPointer<IAlbmMngr> IAlbmMngrCtr(
 
 AlbumManager::AlbumManager(ISite *pSite, IMainLog *pLog,
                            const QString &strFolder, const QString &strUserId,
-                           const QSharedPointer<IHtmlPageElm> &htmlElmUserMain,
+                           const std::shared_ptr<IHtmlPageElm> &htmlElmUserMain,
                            HttpDownloader &pHttpDown)
     : m_pSite(pSite), m_pLog(pLog), m_strFolder(strFolder),
       m_strUserId(strUserId), m_htmlElmUsrMain(htmlElmUserMain),
@@ -40,23 +40,25 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
 
     LogOut(QString("Start to process album of user %1(%2) with total %3, hide"
                    " %4, limited %5 pics")
-           .arg(m_strUserId).arg(m_htmlElmUsrMain->GetUserName())
-           .arg(m_htmlElmUsrMain->GetTotalPhotoCount_Method2())
+           .arg(m_strUserId).arg(QsFrWs(m_htmlElmUsrMain->GetUserName()))
+           .arg(m_htmlElmUsrMain->GetTotalPhotoCount())
            .arg(m_htmlElmUsrMain->GetHidePhotoCount())
            .arg(m_htmlElmUsrMain->GetViewLimitedPhotoCount()));
 
-    QString strAlbumLink = m_htmlElmUsrMain->GetFirstCommonAlbumUrl();
+    QString strAlbumLink = QsFrWs(m_htmlElmUsrMain->GetFirstCommonAlbumUrl());
     if (strAlbumLink.isEmpty()) {
-        strAlbumLink = m_pSite->UrlBldr()->GetCommonAlbumUrlById(m_strUserId);
+        strAlbumLink = QsFrWs(m_pSite->UrlBldr()->GetCommonAlbumUrlById(
+                                  m_strUserId.toStdWString()));
 
         LogOut(QString("WARNING - empty common album for user %1(%2). "
                        "Try direct common album link %3")
-               .arg(m_strUserId).arg(m_htmlElmUsrMain->GetUserName())
+               .arg(m_strUserId).arg(QsFrWs(m_htmlElmUsrMain->GetUserName()))
                .arg(strAlbumLink));
     }
     for (;
         strAlbumLink != "" ;
-        strAlbumLink = m_htmlElmUsrMain->GetNextCommonAlbumUrl(strAlbumLink))
+        strAlbumLink = QsFrWs(m_htmlElmUsrMain->GetNextCommonAlbumUrl(
+                                  strAlbumLink.toStdWString())))
     {
         QByteArray byteRep = m_pHttpDown.DownloadSync(QUrl(strAlbumLink));
         QString strRep = CommonUtils::Win1251ToQstring(byteRep);
@@ -71,30 +73,31 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
 
         auto htmlAlbumPage(m_pSite->HtmlPageElmCtr(strRep));
         auto lstUserAlbumPic(htmlAlbumPage->GetPicPageUrlsListByImageIdOnly());
-        if (lstUserAlbumPic.isEmpty()) {
+        if (lstUserAlbumPic.empty()) {
             break;
         }
 
         int iSzBeforeForeach(lstUrlFileName.size());
 
-        QString strPicUrl;
-        foreach(strPicUrl, lstUserAlbumPic) {
-            auto strPicFileName = m_pSite->FileNameBldr()->GetPicFileName(
-                        m_strUserId,
-                        m_pSite->UrlBldr()->GetPicIdFromUrl(strPicUrl));
+        for(const std::wstring &wStrPicUrl: lstUserAlbumPic) {
+            auto strUrl = QsFrWs(wStrPicUrl);
+            auto strFile = QsFrWs(m_pSite->FileNameBldr()->GetPicFileName(
+                                      m_strUserId.toStdWString(),
+                                      m_pSite->UrlBldr()->
+                                      GetPicIdFromUrl(strUrl.toStdWString())));
 
-            QFile file(m_strFolder + strPicFileName);
+            QFile file(m_strFolder + strFile);
             if (!file.exists()) {
-                Q_ASSERT(!strPicUrl.isEmpty() && !strPicFileName.isEmpty());
-                lstUrlFileName.append(qMakePair(strPicUrl, strPicFileName));
+                Q_ASSERT(!strUrl.isEmpty() && !strFile.isEmpty());
+                lstUrlFileName.append(qMakePair(strUrl, strFile));
             } else {
                 LogOut("The " + file.fileName()
                        + " exist, break parsing album pages");
                 break;
             }
         }
-        if (lstUserAlbumPic.size() !=
-                lstUrlFileName.size() - iSzBeforeForeach) {
+        int iSize = lstUserAlbumPic.size();
+        if (iSize != lstUrlFileName.size() - iSzBeforeForeach){
             break;
         } else {
             LogOut("User id " + m_strUserId +
@@ -104,7 +107,7 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
 
     LogOut(QString("Finished(user id %1). %2 from %3 picture is missing local")
            .arg(m_strUserId).arg(lstUrlFileName.size())
-           .arg(m_htmlElmUsrMain->GetTotalPhotoCount_Method2()));
+           .arg(m_htmlElmUsrMain->GetTotalPhotoCount()));
 
     return lstUrlFileName;
 }

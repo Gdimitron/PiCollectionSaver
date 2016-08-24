@@ -83,10 +83,10 @@ extern QSharedPointer<ISerialPicsDownloader> ISerPicsDownloaderCtr(
 // interface ISite
 struct ISite
 {
-    virtual QSharedPointer<ISiteInfo> SiteInfo() = 0;
-    virtual QSharedPointer<IUrlBuilder> UrlBldr() = 0;
-    virtual QSharedPointer<IFileSysBldr> FileNameBldr() = 0;
-    virtual QSharedPointer<IHtmlPageElm> HtmlPageElmCtr(const QString &) = 0;
+    virtual std::shared_ptr<ISiteInfo> SiteInfo() = 0;
+    virtual std::shared_ptr<IUrlBuilder> UrlBldr() = 0;
+    virtual std::shared_ptr<IFileSysBldr> FileNameBldr() = 0;
+    virtual std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &) = 0;
 
     virtual QSharedPointer<ISqLiteManager> DB() = 0;
     virtual ISerialPicsDownloader* SerialPicsDwnld() = 0;
@@ -108,7 +108,7 @@ struct IAlbmMngr
 extern QSharedPointer<IAlbmMngr> IAlbmMngrCtr(
         ISite *pSite, IMainLog *pLog, const QString &strFolder,
         const QString &strUserId,
-        const QSharedPointer<IHtmlPageElm> &htmlElmUserMain,
+        const std::shared_ptr<IHtmlPageElm> &htmlElmUserMain,
         HttpDownloader &pHttpDown);
 
 

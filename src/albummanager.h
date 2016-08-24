@@ -12,13 +12,13 @@ class AlbumManager: public IAlbmMngr
     IMainLog *m_pLog;
     QString m_strFolder;
     QString m_strUserId;
-    QSharedPointer<IHtmlPageElm> m_htmlElmUsrMain;
+    std::shared_ptr<IHtmlPageElm> m_htmlElmUsrMain;
     HttpDownloader &m_pHttpDown;
 
 public:
     AlbumManager(ISite *pSite, IMainLog *pLog,
                  const QString &strFolder, const QString &strUserId,
-                 const QSharedPointer<IHtmlPageElm> &htmlElementUserMain,
+                 const std::shared_ptr<IHtmlPageElm> &htmlElementUserMain,
                  HttpDownloader &pHttpDown);
 
     qListPairOf2Str GetMissingPicPageUrlLst();

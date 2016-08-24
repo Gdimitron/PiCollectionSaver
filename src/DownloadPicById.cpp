@@ -48,7 +48,8 @@ qListPairOf2Str DownloadPicById::Impl()
             }
             else if (strLine.indexOf(QRegExp("\\D")) == -1) {
                 // line with digits only (suppose that line is pic ID)
-                strPicPageUrl = m_pSite->UrlBldr()->GetPicUrlByPicId(strLine);
+                strPicPageUrl = QsFrWs(m_pSite->UrlBldr()->GetPicUrlByPicId(
+                                           strLine.toStdWString()));
             }
 
             if (strPicPageUrl.isEmpty()) {
@@ -59,8 +60,8 @@ qListPairOf2Str DownloadPicById::Impl()
                 break;
             }
 
-            m_Http.ObtainAuthCookie(QUrl(m_pSite->SiteInfo()->GetHostName()),
-                                    m_pSite->SiteInfo()->GetAuthInfo());
+            m_Http.ObtainAuthCookie(QsFrWs(m_pSite->SiteInfo()->GetHostName()),
+                                    QsFrWs(m_pSite->SiteInfo()->GetAuthInfo()));
             QByteArray byteRep = m_Http.DownloadSync(QUrl(strPicPageUrl));
             QString strRep = CommonUtils::Win1251ToQstring(byteRep);
             if (strRep.isEmpty()) {
@@ -75,7 +76,7 @@ qListPairOf2Str DownloadPicById::Impl()
             auto htmlElement(m_pSite->HtmlPageElmCtr(strRep));
             QString strUserId;
             try {
-                strUserId = htmlElement->GetUserIdPicPage();
+                strUserId = QsFrWs(htmlElement->GetUserIdPicPage());
             } catch (const parse_ex& ex) {
                 if (CErrHlpr::IgnMsgBox("Could not find user ID for url",
                                         "URL: " + strPicPageUrl)) {
@@ -84,14 +85,15 @@ qListPairOf2Str DownloadPicById::Impl()
                 break;
             }
             Q_ASSERT(!strUserId.isEmpty());
-            auto strPicFileName(m_pSite->FileNameBldr()->GetPicFileName(
-                                    strUserId, m_pSite->UrlBldr()->
-                                    GetPicIdFromUrl(strPicPageUrl)));
+            auto strFile(QsFrWs(m_pSite->FileNameBldr()->GetPicFileName(
+                                    strUserId.toStdWString(),
+                                    m_pSite->UrlBldr()->GetPicIdFromUrl(
+                                        strPicPageUrl.toStdWString()))));
 
-            lstUrlFileName.append(qMakePair(strPicPageUrl, strPicFileName));
+            lstUrlFileName.append(qMakePair(strPicPageUrl, strFile));
 
             m_pLog->LogOut("(DownloadPicById::Impl) Add pic to list: "
-                           + strUserId + " (" + strPicFileName + ")");
+                           + strUserId + " (" + strFile + ")");
         }
     }
     return lstUrlFileName;

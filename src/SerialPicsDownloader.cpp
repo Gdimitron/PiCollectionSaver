@@ -30,8 +30,8 @@ void SerialPicsDownloader::SetSite(ISite *pSite)
 {
     m_pSite = pSite;
     Q_ASSERT(m_pHttp);
-    m_pHttp->ObtainAuthCookie(QUrl(m_pSite->SiteInfo()->GetHostName()),
-                              m_pSite->SiteInfo()->GetAuthInfo());
+    m_pHttp->ObtainAuthCookie(QsFrWs(m_pSite->SiteInfo()->GetHostName()),
+                              QsFrWs(m_pSite->SiteInfo()->GetAuthInfo()));
 }
 
 void SerialPicsDownloader::SetOverwriteMode(bool bOverwrite)
@@ -169,8 +169,8 @@ void SerialPicsDownloader::PicPageDownloadDoneProcess(
             it->m_ptrHtmlElmtPicPage = m_pSite->HtmlPageElmCtr(
                         CommonUtils::Win1251ToQstring(arrPicPage));
             it->m_iHttpReplyStatusCode = iHttpReplyCode;
-            try { it->m_strDirectPicUrl =
-                        it->m_ptrHtmlElmtPicPage->GetBestPossibleDirectPicUrl();
+            try { it->m_strDirectPicUrl = QsFrWs(it->m_ptrHtmlElmtPicPage->
+                                                 GetBestPossibleDirectPicUrl());
             } catch (const parse_ex &ex) {
                 QDebug(QtDebugMsg)
                         << "PicPageDownloadDoneProcess; ThredId = "
@@ -179,7 +179,8 @@ void SerialPicsDownloader::PicPageDownloadDoneProcess(
                         << strPicPageUrl;
 
                 it->m_bDonwloadError = true;
-                it->m_strError = "Couldn't parse picture url: " + *ex.strWhat();
+                it->m_strError = "Couldn't parse picture url: " +
+                        QsFrWs(*ex.strWhat());
                 return;
             }
             Q_ASSERT(!it->m_strDirectPicUrl.isEmpty());
@@ -212,8 +213,9 @@ void SerialPicsDownloader::DirectPicDownloadDoneProcess(
 
                     it->m_bPicForBrowser = true;
 
-                    it->m_strDirectPicUrl = it->m_ptrHtmlElmtPicPage->
-                            GetShownInBrowserDirectPicUrl();
+                    it->m_strDirectPicUrl = QsFrWs(
+                                it->m_ptrHtmlElmtPicPage->
+                                GetShownInBrowserDirectPicUrl());
                     Q_ASSERT(!it->m_strDirectPicUrl.isEmpty());
 
                     m_pHttp->DownloadAsync(it->m_strDirectPicUrl);

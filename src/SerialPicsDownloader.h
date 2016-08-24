@@ -21,7 +21,7 @@ struct stPicElement
     QString m_strFileNameToSave;
     bool m_bDownloading;
     int m_iHttpReplyStatusCode;
-    QSharedPointer<IHtmlPageElm> m_ptrHtmlElmtPicPage;
+    std::shared_ptr<IHtmlPageElm> m_ptrHtmlElmtPicPage;
     QByteArray m_arrPicContent;
     bool m_bDownloadDone;
     bool m_bDonwloadError;

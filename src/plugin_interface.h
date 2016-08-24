@@ -5,20 +5,43 @@
 #pragma once
 #include <functional>
 #include <exception>
-#include <QSharedPointer>
-#include <QString>
+#include <memory>
+#include <list>
+
+#ifdef QT_VERSION
+inline QString QsFrWs(const std::wstring &wstr)
+{
+    return QString::fromStdWString(wstr);
+}
+#endif
 
 #define _countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+
+#ifdef _WIN32
+    #define DECL_EXPORT __declspec(dllexport)
+    #define DECL_IMPORT __declspec(dllimport)
+#else
+    #define DECL_EXPORT
+    #define DECL_IMPORT
+#endif
+
+#if defined(PICOLLECTION_LIB)
+#  define SHARED_EXPORT DECL_EXPORT
+#else
+#  define SHARED_EXPORT DECL_IMPORT
+#endif
+
+
 class parse_ex: public std::exception
 {
-    QString m_strWhat, m_strDetails;
+    std::wstring m_strWhat, m_strDetails;
 public:
-    parse_ex(const QString &strWhat, const QString &strDetails)
+    parse_ex(const std::wstring &strWhat, const std::wstring &strDetails)
         : m_strWhat(strWhat), m_strDetails(strDetails) { }
-    const char* what() const noexcept { return m_strWhat.toUtf8(); }
-    const QString *strWhat()const noexcept { return &m_strWhat; }
-    const QString *strDetails()const noexcept { return &m_strDetails; }
+    // const char* what() const noexcept { return m_strWhat.toUtf8(); }
+    const std::wstring *strWhat()const noexcept { return &m_strWhat; }
+    const std::wstring *strDetails()const noexcept { return &m_strDetails; }
 };
 
 
@@ -26,32 +49,32 @@ public:
 // return site related constants (host, login, etc)
 struct ISiteInfo
 {
-    virtual const QString &GetHostName() const = 0;
+    virtual const std::wstring &GetHostName() const = 0;
 
-    virtual const QString &GetLogin() const = 0;
-    virtual const QString &GetAuthInfo() const = 0;
+    virtual const std::wstring &GetLogin() const = 0;
+    virtual const std::wstring &GetAuthInfo() const = 0;
 
-    virtual const QString &GetDBFileName() const = 0;
-    virtual const QString &GetDBTableName() const = 0;
+    virtual const std::wstring &GetDBFileName() const = 0;
+    virtual const std::wstring &GetDBTableName() const = 0;
 
     virtual ~ISiteInfo() {}
 };
-extern "C" QSharedPointer<ISiteInfo> ISiteInfoCtr();
-typedef QSharedPointer<ISiteInfo> (ISiteInfoCtr_t)();
+extern "C" std::shared_ptr<ISiteInfo> ISiteInfoCtr();
+typedef std::shared_ptr<ISiteInfo> (ISiteInfoCtr_t)();
 typedef std::function<ISiteInfoCtr_t> f_ISiteInfoCtr;
 
 
 // interface IFileSysBldr some function to build file name
 struct IFileSysBldr
 {
-    virtual QString GetPicFileName(const QString& strUserId,
-                                   const QString& strFileId) = 0;
+    virtual std::wstring GetPicFileName(const std::wstring& strUserId,
+                                        const std::wstring& strFileId) = 0;
 
-    virtual QString GetUserId(const QString& strFileName) = 0;
+    virtual std::wstring GetUserId(const std::wstring& wstrFileName) = 0;
     virtual ~IFileSysBldr() {}
 };
-extern "C" QSharedPointer<IFileSysBldr> IFileSysBldrCtr();
-typedef QSharedPointer<IFileSysBldr> (IFileSysBldrCtr_t)();
+extern "C" std::shared_ptr<IFileSysBldr> IFileSysBldrCtr();
+typedef std::shared_ptr<IFileSysBldr> (IFileSysBldrCtr_t)();
 typedef std::function<IFileSysBldrCtr_t> f_IFileSysBldrCtr;
 
 
@@ -59,17 +82,19 @@ typedef std::function<IFileSysBldrCtr_t> f_IFileSysBldrCtr;
 // return main user page, album urls by user id and name
 struct IUrlBuilder
 {
-    virtual QString GetMainUserPageUrlByName(const QString& strUserName) = 0;
-    virtual QString GetMainUserPageUrlById(const QString& strUserName) = 0;
-    virtual QString GetPicUrlByPicId(const QString& strPicId) = 0;
-    virtual QString GetCommonAlbumUrlById(const QString& strId) = 0;
-    virtual QString GetUserIdFromUrl(const QString& strUrl) = 0;
-    virtual QString GetUserNameFromUrl(const QString& strUrl) = 0;
-    virtual QString GetPicIdFromUrl(const QString& strUrl) = 0;
+    virtual std::wstring GetMainUserPageUrlByName(
+            const std::wstring& strUserName) = 0;
+    virtual std::wstring GetMainUserPageUrlById(
+            const std::wstring& strUserName) = 0;
+    virtual std::wstring GetPicUrlByPicId(const std::wstring& strPicId) = 0;
+    virtual std::wstring GetCommonAlbumUrlById(const std::wstring& strId) = 0;
+    virtual std::wstring GetUserIdFromUrl(const std::wstring& strUrl) = 0;
+    virtual std::wstring GetUserNameFromUrl(const std::wstring& strUrl) = 0;
+    virtual std::wstring GetPicIdFromUrl(const std::wstring& strUrl) = 0;
     virtual ~IUrlBuilder() {}
 };
-extern "C" QSharedPointer<IUrlBuilder> IUrlBuilderCtr();
-typedef QSharedPointer<IUrlBuilder> (IUrlBuilderCtr_t)();
+extern "C" std::shared_ptr<IUrlBuilder> IUrlBuilderCtr();
+typedef std::shared_ptr<IUrlBuilder> (IUrlBuilderCtr_t)();
 typedef std::function<IUrlBuilderCtr_t> f_IUrlBuilderCtr;
 
 
@@ -77,25 +102,31 @@ typedef std::function<IUrlBuilderCtr_t> f_IUrlBuilderCtr;
 struct IHtmlPageElm
 {
     virtual bool IsSelfNamePresent() = 0;
-    virtual QString GetPersonalUserLink() = 0;
-    virtual QString GetUserName() = 0;
-    virtual QString GetUserIdPicPage() = 0;
-    virtual QString GetLastActivityTime() = 0;
-    virtual QString GetFirstCommonAlbumUrl() = 0;
-    virtual QString GetNextCommonAlbumUrl(const QString &strCurAlbumUrl) = 0;
-    virtual QStringList GetPicPageUrlsList() = 0;
-    virtual QStringList GetPicPageUrlsListByImageIdOnly() = 0;
+    virtual std::wstring GetPersonalUserLink() = 0;
+    virtual std::wstring GetUserName() = 0;
+    virtual std::wstring GetUserIdPicPage() = 0;
+    virtual std::wstring GetLastActivityTime() = 0;
+    virtual std::wstring GetFirstCommonAlbumUrl() = 0;
+    virtual std::wstring GetNextCommonAlbumUrl(
+            const std::wstring &strCurAlbumUrl) = 0;
+    virtual std::list<std::wstring> GetPicPageUrlsList() = 0;
+    virtual std::list<std::wstring> GetPicPageUrlsListByImageIdOnly() = 0;
 
-    virtual QString GetBestPossibleDirectPicUrl() = 0;
-    virtual QString GetShownInBrowserDirectPicUrl() = 0;
+    virtual std::wstring GetBestPossibleDirectPicUrl() = 0;
+    virtual std::wstring GetShownInBrowserDirectPicUrl() = 0;
 
-    virtual int GetTotalPhotoCount_Method1() = 0;
-    virtual int GetTotalPhotoCount_Method2() = 0;
+    virtual int GetTotalPhotoCount() = 0;
     virtual int GetHidePhotoCount() = 0;
     virtual int GetViewLimitedPhotoCount() = 0;
 
     virtual ~IHtmlPageElm() {}
 };
-extern "C" QSharedPointer<IHtmlPageElm> IHtmlPageElmCtr(const QString &strHtml);
-typedef QSharedPointer<IHtmlPageElm> (IHtmlPageElmCtr_t)(const QString &strHtm);
+extern "C" std::shared_ptr<IHtmlPageElm> IHtmlPageElmCtr(
+        const std::wstring &strHtml);
+typedef std::shared_ptr<IHtmlPageElm> (IHtmlPageElmCtr_t)(
+        const std::wstring &strHtm);
 typedef std::function<IHtmlPageElmCtr_t> f_IHtmlPageElmCtr;
+
+extern "C" SHARED_EXPORT std::shared_ptr<IFileSysBldr> IFileSysBldrCtr();
+extern "C" SHARED_EXPORT std::shared_ptr<IUrlBuilder> IUrlBuilderCtr();
+extern "C" SHARED_EXPORT std::shared_ptr<ISiteInfo> ISiteInfoCtr();

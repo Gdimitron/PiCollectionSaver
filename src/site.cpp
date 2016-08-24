@@ -41,32 +41,33 @@ Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
     m_serPicDwnld.SetDestinationFolder(strDestDir);
 }
 
-QSharedPointer<ISiteInfo> Site::SiteInfo()
+std::shared_ptr<ISiteInfo> Site::SiteInfo()
 {
     return m_siteInfo;
 }
 
 
-QSharedPointer<IUrlBuilder> Site::UrlBldr()
+std::shared_ptr<IUrlBuilder> Site::UrlBldr()
 {
     return m_urlBuilder;
 }
 
-QSharedPointer<IFileSysBldr> Site::FileNameBldr()
+std::shared_ptr<IFileSysBldr> Site::FileNameBldr()
 {
     return m_fileNameBuilder;
 }
 
-QSharedPointer<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
+std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
 {
-    return m_fHtmlPageElm(strContent);
+    return m_fHtmlPageElm(strContent.toStdWString());
 }
 
 QSharedPointer<ISqLiteManager> Site::DB()
 {
     if (m_DB.isNull()) {
-        m_DB = ISqLiteManagerCtr(m_strDestDir +"/"+ m_siteInfo->GetDBFileName(),
-                                 m_siteInfo->GetDBTableName());
+        m_DB = ISqLiteManagerCtr(m_strDestDir + "/" +
+                                 QsFrWs(m_siteInfo->GetDBFileName()),
+                                 QsFrWs(m_siteInfo->GetDBTableName()));
     }
     return m_DB;
 }
@@ -96,8 +97,8 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
 {
     m_log->LogOut("Process " + prUsrsActvTime.first);
 
-    QString strMainPageUrl = UrlBldr()->GetMainUserPageUrlById(
-                prUsrsActvTime.first);
+    auto strMainPageUrl = QsFrWs(UrlBldr()->GetMainUserPageUrlById(
+                prUsrsActvTime.first.toStdWString()));
     auto byteRep = m_httpDwnld.DownloadSync(QUrl(strMainPageUrl));
     QString strRep = CommonUtils::Win1251ToQstring(byteRep);
     if (strRep.isEmpty()) {
@@ -114,23 +115,24 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
     QString strLastActiveTime;
     qListPairOf2Str qlstPrPicPageLinkFileName;
     try {
-        strLastActiveTime = htmlElmt->GetLastActivityTime();
+        strLastActiveTime = QsFrWs(htmlElmt->GetLastActivityTime());
         if(strLastActiveTime == prUsrsActvTime.second) {
-            m_log->LogOut("Last active time match(" + htmlElmt->GetUserName()
-                   + ") - switch to next");
+            m_log->LogOut("Last active time match(" +
+                          QsFrWs(htmlElmt->GetUserName()) + ") switch to next");
             return true;
         }
 
-        m_log->LogOut(QString("Last active time does not match(%1 \"%2\" vs \"%3\")"
-                       " - parse common album").arg(htmlElmt->GetUserName())
-               .arg(strLastActiveTime).arg(prUsrsActvTime.second));
+        m_log->LogOut(QString("Last active time does not match(%1 \"%2\" vs"
+                              " \"%3\") - parse common album")
+                      .arg(QsFrWs(htmlElmt->GetUserName()))
+                      .arg(strLastActiveTime).arg(prUsrsActvTime.second));
 
         auto albManager(IAlbmMngrCtr(this, m_log, m_strDestDir,
                                      prUsrsActvTime.first, htmlElmt, m_httpDwnld));
         qlstPrPicPageLinkFileName = albManager->GetMissingPicPageUrlLst();
     } catch (const parse_ex &ex) {
-        if (CErrHlpr::IgnMsgBox("Parse error: " + *ex.strWhat(),
-                                *ex.strDetails())) {
+        if (CErrHlpr::IgnMsgBox("Parse error: " + QsFrWs(*ex.strWhat()),
+                                QsFrWs(*ex.strDetails()))) {
             return true;
         }
         return false;
@@ -139,13 +141,15 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
     if (!qlstPrPicPageLinkFileName.isEmpty()) {
         if (!DownloadPicLoopWithWait(qlstPrPicPageLinkFileName)) {
             if (CErrHlpr::IgnMsgBox("Could not download pics",
-                                    "User: " + htmlElmt->GetUserName())) {
+                                    "User: " + QsFrWs(htmlElmt->GetUserName())))
+            {
                 return true;
             }
             return false;
         }
     }
-    m_log->LogOut("Update last active time (" + htmlElmt->GetUserName() + ")");
+    m_log->LogOut("Update last active time (" + QsFrWs(htmlElmt->GetUserName())
+                  + ")");
     prUsrsActvTime.second = strLastActiveTime;
     DB()->UpdateLastActivityTime(prUsrsActvTime);
 

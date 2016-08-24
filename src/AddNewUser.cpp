@@ -35,7 +35,8 @@ void AddNewUser::Impl()
             QString strId;
             if (strLine.indexOf("id=") != -1) {
                 // get ID from link
-                strId = m_pSite->UrlBldr()->GetUserIdFromUrl(strLine);
+                strId = QsFrWs(m_pSite->UrlBldr()->GetUserIdFromUrl(
+                                   strLine.toStdWString()));
             }
             else if (strLine.indexOf(QRegExp("\\D")) == -1) {
                 // line with digits only(suppose that line is ID)
@@ -54,8 +55,8 @@ void AddNewUser::Impl()
                 m_http = new HttpDownloader(this);
             }
 
-            QString strMainPageUrl =
-                    m_pSite->UrlBldr()->GetMainUserPageUrlById(strId);
+            QString strMainPageUrl = QsFrWs(m_pSite->UrlBldr()->
+                        GetMainUserPageUrlById(strId.toStdWString()));
             QByteArray byteRep = m_http->DownloadSync(QUrl(strMainPageUrl));
             QString strRep = CommonUtils::Win1251ToQstring(byteRep);
 
@@ -71,7 +72,7 @@ void AddNewUser::Impl()
             auto htmlElement(m_pSite->HtmlPageElmCtr(strRep));
             Q_ASSERT(!htmlElement->IsSelfNamePresent());
 
-            QString strUserName = htmlElement->GetUserName();
+            QString strUserName = QsFrWs(htmlElement->GetUserName());
             if (!strUserName.isEmpty())
             {
                 if (m_pSite->DB()->IsUserWithIdExist(strId)) {

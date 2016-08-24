@@ -26,7 +26,7 @@ private:
     QNetworkReply* Download(const QUrl&);
 
 public:
-    void ObtainAuthCookie(const QUrl& url, const QString& authifno);
+    void ObtainAuthCookie(const QString& strUrl, const QString& authifno);
 
     QNetworkReply *DownloadAsync(const QUrl&);
     QByteArray DownloadSync(const QUrl&);

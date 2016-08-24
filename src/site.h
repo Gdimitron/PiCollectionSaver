@@ -12,9 +12,9 @@
 class Site: public ISite
 {
     QString m_strDestDir;
-    QSharedPointer<IUrlBuilder> m_urlBuilder;
-    QSharedPointer<IFileSysBldr> m_fileNameBuilder;
-    QSharedPointer<ISiteInfo> m_siteInfo;
+    std::shared_ptr<IUrlBuilder> m_urlBuilder;
+    std::shared_ptr<IFileSysBldr> m_fileNameBuilder;
+    std::shared_ptr<ISiteInfo> m_siteInfo;
 
     QLibrary m_PlugLib;
     f_IHtmlPageElmCtr m_fHtmlPageElm;
@@ -29,10 +29,10 @@ public:
          IFileSavedCallback *fileSavedClbk );
     virtual ~Site() {}
 
-    QSharedPointer<ISiteInfo> SiteInfo();
-    QSharedPointer<IUrlBuilder> UrlBldr();
-    QSharedPointer<IFileSysBldr> FileNameBldr();
-    QSharedPointer<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
+    std::shared_ptr<ISiteInfo> SiteInfo();
+    std::shared_ptr<IUrlBuilder> UrlBldr();
+    std::shared_ptr<IFileSysBldr> FileNameBldr();
+    std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
 
     QSharedPointer<ISqLiteManager> DB();
     ISerialPicsDownloader* SerialPicsDwnld();
