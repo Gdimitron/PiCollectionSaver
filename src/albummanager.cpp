@@ -105,7 +105,7 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
         }
     }
 
-    LogOut(QString("Finished(user id %1). %2 from %3 picture is missing local")
+    LogOut(QString("Finished(ID %1). %2 from %3 pictures are missing local")
            .arg(m_strUserId).arg(lstUrlFileName.size())
            .arg(m_htmlElmUsrMain->GetTotalPhotoCount()));
 
