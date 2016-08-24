@@ -40,8 +40,8 @@ public:
     parse_ex(const std::wstring &strWhat, const std::wstring &strDetails)
         : m_strWhat(strWhat), m_strDetails(strDetails) { }
     // const char* what() const noexcept { return m_strWhat.toUtf8(); }
-    const std::wstring *strWhat()const noexcept { return &m_strWhat; }
-    const std::wstring *strDetails()const noexcept { return &m_strDetails; }
+    const std::wstring &strWhat()const noexcept { return m_strWhat; }
+    const std::wstring &strDetails()const noexcept { return m_strDetails; }
 };
 
 

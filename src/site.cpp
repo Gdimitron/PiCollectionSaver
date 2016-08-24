@@ -131,8 +131,8 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
                                      prUsrsActvTime.first, htmlElmt, m_httpDwnld));
         qlstPrPicPageLinkFileName = albManager->GetMissingPicPageUrlLst();
     } catch (const parse_ex &ex) {
-        if (CErrHlpr::IgnMsgBox("Parse error: " + QsFrWs(*ex.strWhat()),
-                                QsFrWs(*ex.strDetails()))) {
+        if (CErrHlpr::IgnMsgBox("Parse error: " + QsFrWs(ex.strWhat()),
+                                QsFrWs(ex.strDetails()))) {
             return true;
         }
         return false;

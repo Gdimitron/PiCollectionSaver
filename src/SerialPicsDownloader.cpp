@@ -180,7 +180,7 @@ void SerialPicsDownloader::PicPageDownloadDoneProcess(
 
                 it->m_bDonwloadError = true;
                 it->m_strError = "Couldn't parse picture url: " +
-                        QsFrWs(*ex.strWhat());
+                        QsFrWs(ex.strWhat());
                 return;
             }
             Q_ASSERT(!it->m_strDirectPicUrl.isEmpty());
