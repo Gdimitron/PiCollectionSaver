@@ -4,7 +4,5 @@
 
 #include "CommonConstants.h"
 
-const char g_szSiteType[]("PRV");
-
 // max concurrent download threads at time(one thread download one pic)
 const int g_intMaxConcurrent(3);

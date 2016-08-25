@@ -23,6 +23,7 @@ public:
 private:
     Ui::PiCollectionSaverClass ui;
 
+    QString m_strSiteType;
     // 0-stopped, 1-processing, 2-request to stop:
     std::atomic<int> m_iProccessing;
     void StartProcessing();

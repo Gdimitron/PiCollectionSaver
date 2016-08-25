@@ -13,7 +13,7 @@
 #include <QSqlTableModel>
 
 PiCollectionSaver::PiCollectionSaver(QWidget *parent)
-    : QMainWindow(parent), m_iProccessing(0)
+    : QMainWindow(parent), m_strSiteType("PRV"), m_iProccessing(0)
 {
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
@@ -112,7 +112,7 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
 
     QSharedPointer<Site> site;
     try {
-        site.reset(new Site(g_szSiteType, ui.lineEditDestinationFolder->text(),
+        site.reset(new Site(m_strSiteType, ui.lineEditDestinationFolder->text(),
                             this, this));
     } catch (const std::bad_function_call &ex) {
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
@@ -145,7 +145,7 @@ void PiCollectionSaver::on_actionAdd_new_user_s_triggered()
 {
     QSharedPointer<Site> site;
     try {
-        site.reset(new Site(g_szSiteType, ui.lineEditDestinationFolder->text(),
+        site.reset(new Site(m_strSiteType, ui.lineEditDestinationFolder->text(),
                             this, this));
     } catch (const std::bad_function_call &ex) {
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
@@ -161,7 +161,7 @@ void PiCollectionSaver::on_actionDownload_photo_by_ID_triggered()
 {
     QSharedPointer<Site> site;
     try {
-        site.reset(new Site(g_szSiteType, ui.lineEditDestinationFolder->text(),
+        site.reset(new Site(m_strSiteType, ui.lineEditDestinationFolder->text(),
                             this, this));
     } catch (const std::bad_function_call &ex) {
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());

@@ -64,13 +64,14 @@ typedef std::shared_ptr<ISiteInfo> (ISiteInfoCtr_t)();
 typedef std::function<ISiteInfoCtr_t> f_ISiteInfoCtr;
 
 
+// TODO: Add const to methods(not only here)
 // interface IFileSysBldr some function to build file name
 struct IFileSysBldr
 {
     virtual std::wstring GetPicFileName(const std::wstring& strUserId,
                                         const std::wstring& strFileId) = 0;
 
-    virtual std::wstring GetUserId(const std::wstring& wstrFileName) = 0;
+    virtual std::wstring GetUserId(const std::wstring& strFileName) = 0;
     virtual ~IFileSysBldr() {}
 };
 extern "C" std::shared_ptr<IFileSysBldr> IFileSysBldrCtr();

@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #pragma once
-#include <QString>
-
-extern const char g_szSiteType[];
 
 // max concurrent download threads at time(one thread download one pic)
 extern const int g_intMaxConcurrent;
