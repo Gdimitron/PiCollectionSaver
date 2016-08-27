@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <string>
+#include <assert.h>
 #include <functional>
 #include <exception>
 #include <memory>
@@ -40,8 +42,8 @@ public:
     parse_ex(const std::wstring &strWhat, const std::wstring &strDetails)
         : m_strWhat(strWhat), m_strDetails(strDetails) { }
     // const char* what() const noexcept { return m_strWhat.toUtf8(); }
-    const std::wstring &strWhat()const noexcept { return m_strWhat; }
-    const std::wstring &strDetails()const noexcept { return m_strDetails; }
+    const std::wstring &strWhat() const noexcept { return m_strWhat; }
+    const std::wstring &strDetails() const noexcept { return m_strDetails; }
 };
 
 
@@ -68,10 +70,11 @@ typedef std::function<ISiteInfoCtr_t> f_ISiteInfoCtr;
 // interface IFileSysBldr some function to build file name
 struct IFileSysBldr
 {
-    virtual std::wstring GetPicFileName(const std::wstring& strUserId,
-                                        const std::wstring& strFileId) = 0;
+    virtual std::wstring GetPicFileName(
+            const std::wstring& strUserId,
+            const std::wstring& strFileId) const = 0;
 
-    virtual std::wstring GetUserId(const std::wstring& strFileName) = 0;
+    virtual std::wstring GetUserId(const std::wstring& strFileName) const = 0;
     virtual ~IFileSysBldr() {}
 };
 extern "C" std::shared_ptr<IFileSysBldr> IFileSysBldrCtr();
@@ -84,14 +87,17 @@ typedef std::function<IFileSysBldrCtr_t> f_IFileSysBldrCtr;
 struct IUrlBuilder
 {
     virtual std::wstring GetMainUserPageUrlByName(
-            const std::wstring& strUserName) = 0;
+            const std::wstring& strUserName) const = 0;
     virtual std::wstring GetMainUserPageUrlById(
-            const std::wstring& strUserName) = 0;
-    virtual std::wstring GetPicUrlByPicId(const std::wstring& strPicId) = 0;
-    virtual std::wstring GetCommonAlbumUrlById(const std::wstring& strId) = 0;
-    virtual std::wstring GetUserIdFromUrl(const std::wstring& strUrl) = 0;
-    virtual std::wstring GetUserNameFromUrl(const std::wstring& strUrl) = 0;
-    virtual std::wstring GetPicIdFromUrl(const std::wstring& strUrl) = 0;
+            const std::wstring& strUserName) const = 0;
+    virtual std::wstring GetPicUrlByPicId(
+            const std::wstring& strPicId) const = 0;
+    virtual std::wstring GetCommonAlbumUrlById(
+            const std::wstring& strId) const = 0;
+    virtual std::wstring GetUserIdFromUrl(const std::wstring& strUrl) const = 0;
+    virtual std::wstring GetUserNameFromUrl(
+            const std::wstring& strUrl) const = 0;
+    virtual std::wstring GetPicIdFromUrl(const std::wstring& strUrl) const = 0;
     virtual ~IUrlBuilder() {}
 };
 extern "C" std::shared_ptr<IUrlBuilder> IUrlBuilderCtr();
@@ -102,19 +108,19 @@ typedef std::function<IUrlBuilderCtr_t> f_IUrlBuilderCtr;
 // interface IHtmlPageElm common for user main page, album, etc
 struct IHtmlPageElm
 {
-    virtual bool IsSelfNamePresent() = 0;
-    virtual std::wstring GetPersonalUserLink() = 0;
-    virtual std::wstring GetUserName() = 0;
-    virtual std::wstring GetUserIdPicPage() = 0;
-    virtual std::wstring GetLastActivityTime() = 0;
-    virtual std::wstring GetFirstCommonAlbumUrl() = 0;
+    virtual bool IsSelfNamePresent() const = 0;
+    virtual std::wstring GetPersonalUserLink() const = 0;
+    virtual std::wstring GetUserName() const = 0;
+    virtual std::wstring GetUserIdPicPage() const = 0;
+    virtual std::wstring GetLastActivityTime() const = 0;
+    virtual std::wstring GetFirstCommonAlbumUrl() const = 0;
     virtual std::wstring GetNextCommonAlbumUrl(
             const std::wstring &strCurAlbumUrl) = 0;
-    virtual std::list<std::wstring> GetPicPageUrlsList() = 0;
-    virtual std::list<std::wstring> GetPicPageUrlsListByImageIdOnly() = 0;
+    virtual std::list<std::wstring> GetPicPageUrlsList() const = 0;
+    virtual std::list<std::wstring> GetPicPageUrlsListByImageIdOnly() const = 0;
 
-    virtual std::wstring GetBestPossibleDirectPicUrl() = 0;
-    virtual std::wstring GetShownInBrowserDirectPicUrl() = 0;
+    virtual std::wstring GetBestPossibleDirectPicUrl() const = 0;
+    virtual std::wstring GetShownInBrowserDirectPicUrl() const = 0;
 
     virtual int GetTotalPhotoCount() = 0;
     virtual int GetHidePhotoCount() = 0;
