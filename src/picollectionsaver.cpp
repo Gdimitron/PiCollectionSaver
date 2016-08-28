@@ -8,12 +8,13 @@
 #include "DownloadPicById.h"
 #include "CommonConstants.h"
 #include "site.h"
+#include "plugin.h"
 
 #include <QDir>
 #include <QSqlTableModel>
 
 PiCollectionSaver::PiCollectionSaver(QWidget *parent)
-    : QMainWindow(parent), m_strSiteType("PRV"), m_iProccessing(0)
+    : QMainWindow(parent), m_iProccessing(0)
 {
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
@@ -30,6 +31,13 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
             SLOT(slotPicViewerReturnPressed()));
     connect(ui.tabWidget, SIGNAL(currentChanged(int)), this,
             SLOT(slotTabChanged(int)));
+
+    auto lstSiteType = Plugin::GetPluginTypes();
+    if (lstSiteType.size() == 1) {
+        m_strSiteType = lstSiteType.at(0);
+    } else if (lstSiteType.size() > 1) {
+        //TODO: add dialog for choosing site type
+    }
 
     //    CSqLiteManager db(szDbFileName, szDbTableName);
     //    QSqlTableModel *model = new QSqlTableModel(this, db.getDb());

@@ -134,6 +134,7 @@ typedef std::shared_ptr<IHtmlPageElm> (IHtmlPageElmCtr_t)(
         const std::wstring &strHtm);
 typedef std::function<IHtmlPageElmCtr_t> f_IHtmlPageElmCtr;
 
+
 extern "C" SHARED_EXPORT std::shared_ptr<IFileSysBldr> IFileSysBldrCtr();
 extern "C" SHARED_EXPORT std::shared_ptr<IUrlBuilder> IUrlBuilderCtr();
 extern "C" SHARED_EXPORT std::shared_ptr<ISiteInfo> ISiteInfoCtr();

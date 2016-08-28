@@ -50,8 +50,7 @@ void SerialPicsDownloader::SetDestinationFolder(const QString& strDstFolderPath)
 void SerialPicsDownloader::AddPicPageUrlLstToQueue(
         qListPairOf2Str &lstPicPageUrlFileName)
 {
-    QPair<QString, QString> pairElement;
-    foreach(pairElement, lstPicPageUrlFileName) {
+    foreach(auto pairElement, lstPicPageUrlFileName) {
         AddElementToList(pairElement.first, pairElement.second);
     }
     ListDownloadProcessingImpl();

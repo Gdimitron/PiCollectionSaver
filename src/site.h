@@ -3,21 +3,20 @@
 // found in the LICENSE file.
 
 #pragma once
-#include <QLibrary>
 
 #include "topleveiInterfaces.h"
 #include "HttpDownloader.h"
 #include "SerialPicsDownloader.h"
+#include "plugin.h"
 
 class Site: public ISite
 {
     QString m_strDestDir;
+
+    Plugin m_plugin;
+    std::shared_ptr<ISiteInfo> m_siteInfo;
     std::shared_ptr<IUrlBuilder> m_urlBuilder;
     std::shared_ptr<IFileSysBldr> m_fileNameBuilder;
-    std::shared_ptr<ISiteInfo> m_siteInfo;
-
-    QLibrary m_PlugLib;
-    f_IHtmlPageElmCtr m_fHtmlPageElm;
 
     IMainLog *m_log;
     QSharedPointer<ISqLiteManager> m_DB;
@@ -29,9 +28,9 @@ public:
          IFileSavedCallback *fileSavedClbk );
     virtual ~Site() {}
 
-    std::shared_ptr<ISiteInfo> SiteInfo();
-    std::shared_ptr<IUrlBuilder> UrlBldr();
-    std::shared_ptr<IFileSysBldr> FileNameBldr();
+    const ISiteInfo *SiteInfo() { return m_siteInfo.get(); }
+    const IUrlBuilder *UrlBldr() { return m_urlBuilder.get(); }
+    const IFileSysBldr *FileNameBldr() { return m_fileNameBuilder.get(); }
     std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
 
     QSharedPointer<ISqLiteManager> DB();

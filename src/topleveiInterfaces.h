@@ -20,6 +20,7 @@ typedef QList< QPair<QString, QString> > qListPairOf2Str;
 struct IMainLog
 {
     virtual void LogOut(const QString &strMessage) = 0;
+    virtual ~IMainLog() {}
 };
 
 
@@ -27,6 +28,7 @@ struct IMainLog
 struct IFileSavedCallback
 {
     virtual void FileSaved(const QString &strPath) = 0;
+    virtual ~IFileSavedCallback() {}
 };
 
 
@@ -83,9 +85,9 @@ extern QSharedPointer<ISerialPicsDownloader> ISerPicsDownloaderCtr(
 // interface ISite
 struct ISite
 {
-    virtual std::shared_ptr<ISiteInfo> SiteInfo() = 0;
-    virtual std::shared_ptr<IUrlBuilder> UrlBldr() = 0;
-    virtual std::shared_ptr<IFileSysBldr> FileNameBldr() = 0;
+    virtual const ISiteInfo *SiteInfo() = 0;
+    virtual const IUrlBuilder *UrlBldr() = 0;
+    virtual const IFileSysBldr *FileNameBldr() = 0;
     virtual std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &) = 0;
 
     virtual QSharedPointer<ISqLiteManager> DB() = 0;
@@ -95,6 +97,7 @@ struct ISite
             const qListPairOf2Str &picPageLinkFileName) = 0;
 
     virtual bool ProcessUser(QPair<QString, QString> prUsrsActvTime) = 0;
+    virtual ~ISite() {}
 };
 
 
@@ -127,6 +130,7 @@ struct IHtmlMainPageManager
             void) = 0;
     virtual QStringList GetFirstAlbumPageUrls(void) = 0;
     virtual QStringList GetAllPicsUrls(void) = 0;
+    virtual ~IHtmlMainPageManager() {}
 
 private:
     virtual bool IsPageAndSqlActivityTimeSame(

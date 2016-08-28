@@ -12,54 +12,21 @@
 
 Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
            IFileSavedCallback *fileSavedClbk)
-    : m_strDestDir(strDestDir), m_log(log), m_DB(NULL), m_httpDwnld(NULL),
-      m_serPicDwnld(NULL, log, fileSavedClbk)
+    : m_strDestDir(strDestDir), m_plugin(type, log), m_log(log), m_DB(NULL),
+      m_httpDwnld(NULL), m_serPicDwnld(NULL, log, fileSavedClbk)
 {
-    m_PlugLib.setFileName(QString("../libPiCollection%1.so").arg(type));
-    if (!m_PlugLib.load()) {
-        m_log->LogOut("Failed to load lib " + m_PlugLib.fileName() +  ". Error:"
-                      + m_PlugLib.errorString());
-        throw std::bad_function_call();
-    }
-    f_ISiteInfoCtr fSiteInfo((ISiteInfoCtr_t*)m_PlugLib
-                             .resolve("ISiteInfoCtr"));
-    f_IFileSysBldrCtr fBldCtr((IFileSysBldrCtr_t*)m_PlugLib
-                              .resolve("IFileSysBldrCtr"));
-    f_IUrlBuilderCtr fUrlBldr((IUrlBuilderCtr_t*)m_PlugLib
-                              .resolve("IUrlBuilderCtr"));
-    m_fHtmlPageElm = ((IHtmlPageElmCtr_t*)m_PlugLib.resolve("IHtmlPageElmCtr"));
-    if (!m_fHtmlPageElm) {
-        throw std::bad_function_call();
-    }
-
     // bad_function_call exception in case of problem -
-    m_siteInfo = fSiteInfo();
-    m_fileNameBuilder = fBldCtr();
-    m_urlBuilder = fUrlBldr();
+    m_siteInfo = m_plugin.GetSiteInfo();
+    m_urlBuilder = m_plugin.GetUrlBuilder();
+    m_fileNameBuilder = m_plugin.GetFileNameBuilder();
 
     m_serPicDwnld.SetSite(this);
     m_serPicDwnld.SetDestinationFolder(strDestDir);
 }
 
-std::shared_ptr<ISiteInfo> Site::SiteInfo()
-{
-    return m_siteInfo;
-}
-
-
-std::shared_ptr<IUrlBuilder> Site::UrlBldr()
-{
-    return m_urlBuilder;
-}
-
-std::shared_ptr<IFileSysBldr> Site::FileNameBldr()
-{
-    return m_fileNameBuilder;
-}
-
 std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
 {
-    return m_fHtmlPageElm(strContent.toStdWString());
+    return m_plugin.GetHtmlPageElm(strContent);
 }
 
 QSharedPointer<ISqLiteManager> Site::DB()
@@ -128,7 +95,8 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
                       .arg(strLastActiveTime).arg(prUsrsActvTime.second));
 
         auto albManager(IAlbmMngrCtr(this, m_log, m_strDestDir,
-                                     prUsrsActvTime.first, htmlElmt, m_httpDwnld));
+                                     prUsrsActvTime.first,
+                                     htmlElmt, m_httpDwnld));
         qlstPrPicPageLinkFileName = albManager->GetMissingPicPageUrlLst();
     } catch (const parse_ex &ex) {
         if (CErrHlpr::IgnMsgBox("Parse error: " + QsFrWs(ex.strWhat()),
@@ -155,4 +123,3 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
 
     return true;
 }
-
