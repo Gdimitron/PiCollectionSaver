@@ -30,8 +30,9 @@ void SerialPicsDownloader::SetSite(ISite *pSite)
 {
     m_pSite = pSite;
     Q_ASSERT(m_pHttp);
-    m_pHttp->ObtainAuthCookie(QsFrWs(m_pSite->SiteInfo()->GetHostName()),
-                              QsFrWs(m_pSite->SiteInfo()->GetAuthInfo()));
+    m_pHttp->ObtainAuthCookie(
+                QsFrWs(m_pSite->SiteInfo()->GetProtocolHostName()),
+                QsFrWs(m_pSite->SiteInfo()->GetAuthInfo()));
 }
 
 void SerialPicsDownloader::SetOverwriteMode(bool bOverwrite)

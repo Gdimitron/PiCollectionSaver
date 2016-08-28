@@ -22,6 +22,9 @@ HttpDownloader::~HttpDownloader()
 void HttpDownloader::ObtainAuthCookie(const QString& strUrl,
                                       const QString& authinfo)
 {
+    if (authinfo.isEmpty()) {
+        return;
+    }
     // uploading file using post on Qt: http://codepaste.ru/6479/
     QUrl url(strUrl);
     QNetworkRequest request("http://" + url.host());

@@ -52,6 +52,8 @@ public:
 struct ISiteInfo
 {
     virtual const std::wstring &GetHostName() const = 0;
+    virtual const std::wstring &GetProtocol() const = 0;
+    virtual const std::wstring &GetProtocolHostName() const = 0;
 
     virtual const std::wstring &GetLogin() const = 0;
     virtual const std::wstring &GetAuthInfo() const = 0;

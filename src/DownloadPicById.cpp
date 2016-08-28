@@ -60,8 +60,9 @@ qListPairOf2Str DownloadPicById::Impl()
                 break;
             }
 
-            m_Http.ObtainAuthCookie(QsFrWs(m_pSite->SiteInfo()->GetHostName()),
-                                    QsFrWs(m_pSite->SiteInfo()->GetAuthInfo()));
+            m_Http.ObtainAuthCookie(
+                        QsFrWs(m_pSite->SiteInfo()->GetProtocolHostName()),
+                        QsFrWs(m_pSite->SiteInfo()->GetAuthInfo()));
             QByteArray byteRep = m_Http.DownloadSync(QUrl(strPicPageUrl));
             QString strRep = CommonUtils::Win1251ToQstring(byteRep);
             if (strRep.isEmpty()) {

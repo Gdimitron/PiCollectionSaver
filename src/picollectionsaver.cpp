@@ -37,6 +37,8 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
         m_strSiteType = lstSiteType.at(0);
     } else if (lstSiteType.size() > 1) {
         //TODO: add dialog for choosing site type
+        m_strSiteType = lstSiteType.at(0);
+        Q_ASSERT(m_strSiteType == "DeviantArt");
     }
 
     //    CSqLiteManager db(szDbFileName, szDbTableName);
