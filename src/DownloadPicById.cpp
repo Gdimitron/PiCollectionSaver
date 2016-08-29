@@ -8,7 +8,6 @@
 #include <QTextStream>
 
 #include "errhlpr.h"
-#include "CommonConstants.h"
 #include "CommonUtils.h"
 
 DownloadPicById::DownloadPicById(QWidget *parent, ISite *pSite, IMainLog *pLog)

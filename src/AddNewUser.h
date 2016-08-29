@@ -22,9 +22,11 @@ private:
 public:
     explicit AddNewUser(QWidget *parent = 0, ISite *pSite = 0,
                         IMainLog *pLog = 0);
-
     void Impl();
-    
+
+private:
+    QString ObtainUserName(const QString &strMainPageUrl);
+
 signals:
     
 public slots:
