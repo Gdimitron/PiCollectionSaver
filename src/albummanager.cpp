@@ -55,10 +55,10 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
                .arg(m_strUserId).arg(QsFrWs(m_htmlElmUsrMain->GetUserName()))
                .arg(strAlbumLink));
     }
-    for (;
-        strAlbumLink != "" ;
-        strAlbumLink = QsFrWs(m_htmlElmUsrMain->GetNextCommonAlbumUrl(
-                                  strAlbumLink.toStdWString())))
+    for (int iPicOnPageCnt = 0;
+         strAlbumLink != "" ;
+         strAlbumLink = QsFrWs(m_htmlElmUsrMain->GetNextCommonAlbumUrl(
+                                  strAlbumLink.toStdWString(), iPicOnPageCnt)))
     {
         QByteArray byteRep = m_pHttpDown.DownloadSync(QUrl(strAlbumLink));
         QString strRep = CommonUtils::Win1251ToQstring(byteRep);
@@ -96,8 +96,8 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
                 break;
             }
         }
-        int iSize = lstUserAlbumPic.size();
-        if (iSize != lstUrlFileName.size() - iSzBeforeForeach){
+        iPicOnPageCnt = static_cast<int>(lstUserAlbumPic.size());
+        if (iPicOnPageCnt != lstUrlFileName.size() - iSzBeforeForeach){
             break;
         } else {
             LogOut("User id " + m_strUserId +

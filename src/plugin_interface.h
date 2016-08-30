@@ -113,13 +113,12 @@ typedef std::function<IUrlBuilderCtr_t> f_IUrlBuilderCtr;
 struct IHtmlPageElm
 {
     virtual bool IsSelfNamePresent() const = 0;
-    virtual std::wstring GetPersonalUserLink() const = 0;
     virtual std::wstring GetUserName() const = 0;
     virtual std::wstring GetUserIdPicPage() const = 0;
     virtual std::wstring GetLastActivityTime() const = 0;
     virtual std::wstring GetFirstCommonAlbumUrl() const = 0;
     virtual std::wstring GetNextCommonAlbumUrl(
-            const std::wstring &strCurAlbumUrl) = 0;
+            const std::wstring &strCurAlbumUrl, int iPicOnPageCnt) = 0;
     virtual std::list<std::wstring> GetPicPageUrlsList() const = 0;
     virtual std::list<std::wstring> GetPicPageUrlsListByImageIdOnly() const = 0;
 
