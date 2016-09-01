@@ -138,11 +138,13 @@ void SerialPicsDownloader::httpSlotDone(int iRplStatusCode, const QUrl& url,
     }
 
     if (iRplStatusCode == 200) {
-        if (url.toString().indexOf("view.php?") != -1) {
+        if (url.toString().indexOf(
+                    QsFrWs(m_pSite->SiteInfo()->PagePicUrlSign())) != -1) {
             PicPageDownloadDoneProcess(url.toString(), byteArr,
                                        iRplStatusCode);
             ProcessDoneItems();
-        } else if (url.toString().indexOf("pics.php?") != -1) {
+        } else if (url.toString().indexOf(
+                       QsFrWs(m_pSite->SiteInfo()->DirectPicUrlSign())) != -1) {
             DirectPicDownloadDoneProcess(url.toString(), byteArr,
                                          iRplStatusCode);
             ProcessDoneItems();
