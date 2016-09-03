@@ -124,7 +124,7 @@ void SerialPicsDownloader::httpSlotError(const QUrl& url, const QString& strErr)
     ListDownloadErrorProcess(url.toString(), strErr);
 }
 
-void SerialPicsDownloader::httpSlotDone(int iRplStatusCode, const QUrl& url,
+void SerialPicsDownloader::httpSlotDone(int iRplStatCode, const QUrl& url,
                                         const QByteArray& byteArr)
 {
     /*QDebug(QtDebugMsg) << "httpSlotDone; thred = "
@@ -137,23 +137,20 @@ void SerialPicsDownloader::httpSlotDone(int iRplStatusCode, const QUrl& url,
         return;
     }
 
-    if (iRplStatusCode == 200) {
-        if (url.toString().indexOf(
-                    QsFrWs(m_pSite->SiteInfo()->PagePicUrlSign())) != -1) {
-            PicPageDownloadDoneProcess(url.toString(), byteArr,
-                                       iRplStatusCode);
+    if (iRplStatCode == 200) {
+        auto strUrl = url.toString().toStdWString();
+        if (m_pSite->SiteInfo()->IsPagePicUrl(strUrl)) {
+            PicPageDownloadDoneProcess(url.toString(), byteArr, iRplStatCode);
             ProcessDoneItems();
-        } else if (url.toString().indexOf(
-                       QsFrWs(m_pSite->SiteInfo()->DirectPicUrlSign())) != -1) {
-            DirectPicDownloadDoneProcess(url.toString(), byteArr,
-                                         iRplStatusCode);
+        } else if (m_pSite->SiteInfo()->IsDirectPicUrl(strUrl)) {
+            DirectPicDownloadDoneProcess(url.toString(), byteArr, iRplStatCode);
             ProcessDoneItems();
         } else {
             Q_ASSERT(false);
         }
     } else {
         QString strError("Error, not success HTTP reply code("
-                         + QString::number(iRplStatusCode) + ")");
+                         + QString::number(iRplStatCode) + ")");
         ListDownloadErrorProcess(url.toString(), strError);
     }
 }
@@ -336,6 +333,7 @@ QString SerialPicsDownloader::NumerateFileName(const QString& strFileName)
 {
     QString strNumFileName;
     for (int i = 1; i < 1000; i++) {
+        //TODO: jpeg to proper extension
         strNumFileName = QString("%1_%2.jpeg").arg(strFileName).arg(i);
         QFile file(strNumFileName);
         if (!file.exists())
