@@ -72,7 +72,7 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
         }
 
         auto htmlAlbumPage(m_pSite->HtmlPageElmCtr(strRep));
-        auto lstUserAlbumPic(htmlAlbumPage->GetPicPageUrlsListByImageIdOnly());
+        auto lstUserAlbumPic(htmlAlbumPage->GetPicPageUrlsList());
         if (lstUserAlbumPic.empty()) {
             break;
         }

@@ -122,7 +122,6 @@ struct IHtmlPageElm
     virtual std::wstring GetNextCommonAlbumUrl(
             const std::wstring &strCurAlbumUrl, int iPicOnPageCnt) = 0;
     virtual std::list<std::wstring> GetPicPageUrlsList() const = 0;
-    virtual std::list<std::wstring> GetPicPageUrlsListByImageIdOnly() const = 0;
 
     virtual std::wstring GetBestPossibleDirectPicUrl() const = 0;
     virtual std::wstring GetShownInBrowserDirectPicUrl() const = 0;
