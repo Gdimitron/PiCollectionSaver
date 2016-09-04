@@ -65,7 +65,8 @@ struct ISqLiteManager
     virtual ~ISqLiteManager() {}
 };
 extern QSharedPointer<ISqLiteManager> ISqLiteManagerCtr(
-        const QString &strDBFileName, const QString &strTableName);
+        const QString &strDBFileName, const QString &strTableName,
+        IMainLog *pLog);
 
 struct ISite;
 // interface ISerialPicsDownloader
@@ -114,6 +115,14 @@ extern QSharedPointer<IAlbmMngr> IAlbmMngrCtr(
         const std::shared_ptr<IHtmlPageElm> &htmlElmUserMain,
         HttpDownloader &pHttpDown);
 
+// interface ISqLiteThumbMngr
+struct ISqLitePicPreview
+{
+    virtual QByteArray GetBase64Preview(const QString &strFile) = 0;
+    virtual ~ISqLitePicPreview() {}
+};
+extern QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
+        const QString &strDBFileName, IMainLog *pLog, const QString &strFolder);
 
 // interface IHtmlMainPagesManager
 struct IHtmlMainPageManager

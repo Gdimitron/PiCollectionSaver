@@ -13,33 +13,27 @@ const QString c_strFavClmn              	=	"Favorite";
 
 
 QSharedPointer<ISqLiteManager> ISqLiteManagerCtr(
-        const QString &strDBFileName, const QString &strTableName)
+        const QString &strDBFileName, const QString &strTableName,
+        IMainLog *pLog)
 {
-    QSharedPointer<ISqLiteManager> retVal(new CSqLiteManager(strDBFileName,
-                                                             strTableName));
+    QSharedPointer<ISqLiteManager> retVal(
+                new CSqLiteManager(strDBFileName, strTableName, pLog));
     return retVal;
 }
 
 CSqLiteManager::CSqLiteManager(const QString &strDBFileName,
-                               const QString &strTableName)
-    :m_strTableName(strTableName), m_iReturnedIndex(0)
+                               const QString &strTableName, IMainLog *pLog)
+    : m_strTableName(strTableName), m_pLog(pLog), m_iReturnedIndex(0)
 {
     m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE");
     m_sqLiteDB.setDatabaseName(strDBFileName);
-
-    /*m_sqLiteDB.setUserName("elton");
-    m_sqLiteDB.setHostName("epica");
-    m_sqLiteDB.setPassword("password");*/
-
     if (!m_sqLiteDB.open()) {
-        QSqlError err = m_sqLiteDB.lastError(); qDebug() << err.text();
+        LogOut("Failed to open SqLite db: " + m_sqLiteDB.lastError().text());
         return;
     }
-
+    
     QStringList lstTableList = m_sqLiteDB.tables();
-    if (lstTableList.isEmpty()
-            || lstTableList.indexOf(m_strTableName) == -1)
-    {
+    if (lstTableList.isEmpty() || lstTableList.indexOf(m_strTableName) == -1) {
         QString str = "CREATE TABLE ";
         str += m_strTableName + " ( "
                 + c_strIdClmn + " INTEGER PRIMARY KEY ASC,"		// ROWID alias
@@ -48,16 +42,16 @@ CSqLiteManager::CSqLiteManager(const QString &strDBFileName,
                 + c_strLstActvTime + " TEXT,"
                 //+ c_strLstActvTimeProcessed + " TEXT,"
                 + c_strFavClmn + " INTEGER"
-                ");";
-
-        QSqlQuery sqlQuery;
+                                 ");";
+        
+        QSqlQuery sqlQuery(m_sqLiteDB);
         if(!sqlQuery.exec(str)) {
-            QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
+            LogOut("Failed to execute sql query: "
+                   + sqlQuery.lastError().text());
             return;
         }
     }
 }
-
 
 CSqLiteManager::~CSqLiteManager(void)
 {
@@ -73,21 +67,17 @@ bool CSqLiteManager::IsUserWithIdExist(const QString& strUserId)
     QString strSelectCommand = QString("SELECT * FROM " + m_strTableName
                                        + " WHERE " + c_strUserId
                                        + " IS " + strUserId);
-
-    QSqlQuery sqlQuery;
+    QSqlQuery sqlQuery(m_sqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
-        QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
+        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
         return false;
     }
-
-    // I have not found easy way to determine the number of row
-    // returned(sqlQuery.size() and row affected does not work ), so enumerate:
-    int iResultCound = 0;
+    int iResultCount = 0;
     while (sqlQuery.next()) {
-        iResultCound++;
+        iResultCount++;
     }
-    Q_ASSERT(iResultCound < 2);
-    return iResultCound > 0;
+    Q_ASSERT(iResultCount < 2);
+    return iResultCount > 0;
 }
 
 int CSqLiteManager::GetUserCnt()
@@ -104,16 +94,16 @@ void CSqLiteManager::AddNewUser(const QString & strUserName,
         return;
     }
 
-    QString strInsertCommand
-            = QString("INSERT INTO " + m_strTableName
-                      + "(" + c_strUserName + ", " + c_strUserId + ", "
-                      + c_strLstActvTime + ", " + c_strFavClmn
-                      + ") VALUES('%1', '%2', '%3', 0);")
+    QString strInsertCommand = QString(
+                "INSERT INTO " + m_strTableName
+                + "(" + c_strUserName + ", " + c_strUserId + ", "
+                + c_strLstActvTime + ", " + c_strFavClmn
+                + ") VALUES('%1', '%2', '%3', 0);")
             .arg(strUserName).arg(strUserId).arg(strLstActvTime);
 
-    QSqlQuery sqlQuery;
+    QSqlQuery sqlQuery(m_sqLiteDB);
     if(!sqlQuery.exec(strInsertCommand)) {
-        QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
+        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
         return;
     }
 }
@@ -156,14 +146,15 @@ qListPairOf2Str CSqLiteManager::GetAllUsersIdActivityTimeImpl(
                           " WHERE " + c_strIdClmn + " BETWEEN %1 AND %2")
                 .arg(m_iReturnedIndex + 1).arg(m_iReturnedIndex + iIdIndexInc);
 
-        QSqlQuery sqlQuery;
-        if(!sqlQuery.exec(strSelectCommand) || !sqlQuery.next()) {
-            QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
+        QSqlQuery sqlQuery(m_sqLiteDB);
+        if(!sqlQuery.exec(strSelectCommand)) {
+            LogOut("Failed to execute sql query: "
+                   + sqlQuery.lastError().text());
             return lstReturn;
         }
 
         QSqlRecord sqlRec(sqlQuery.record());
-        do {
+        while (sqlQuery.next()) {
             m_iReturnedIndex++;
 
             if (bFavoriteOnly && sqlQuery.value(
@@ -186,7 +177,7 @@ qListPairOf2Str CSqLiteManager::GetAllUsersIdActivityTimeImpl(
             if (iRecId == iMaxTableId) {
                 bEndReached = true;
             }
-        } while (sqlQuery.next());
+        }
     }
     return lstReturn;
 }
@@ -195,27 +186,37 @@ int CSqLiteManager::GetMaxTableId()
 {
     QString strSelectCommand = "SELECT MAX(" + c_strIdClmn +
             ") AS LargestId FROM " + m_strTableName + " p1";
-    QSqlQuery sqlQuery;
-    if(!sqlQuery.exec(strSelectCommand) || !sqlQuery.next()) {
-        QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
+    QSqlQuery sqlQuery(m_sqLiteDB);
+    if(!sqlQuery.exec(strSelectCommand)) {
+        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
         return -1;
     }
-    return sqlQuery.value(sqlQuery.record().indexOf("LargestId")).toInt();
+    if (sqlQuery.next()) {
+        return sqlQuery.value(sqlQuery.record().indexOf("LargestId")).toInt();
+    }
+    return -1;
 }
 
 void CSqLiteManager::UpdateLastActivityTime(
         QPair<QString, QString> pairUserNameLastActivityTime)
 {
-    QString strUpdateCommand = QString("UPDATE " + m_strTableName + " SET "
-                                       + c_strLstActvTime + " = '%2' WHERE "
-                                       + c_strUserId + " = '%1'")
+    QString strUpdateCommand = QString(
+                "UPDATE " + m_strTableName + " SET "
+                + c_strLstActvTime + " = '%2' WHERE "
+                + c_strUserId + " = '%1'")
             .arg(pairUserNameLastActivityTime.first)
             .arg(pairUserNameLastActivityTime.second);
 
-    QSqlQuery sqlQuery;
+    QSqlQuery sqlQuery(m_sqLiteDB);
     if(!sqlQuery.exec(strUpdateCommand)) {
-        QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
-        return;
+        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
+    }
+}
+
+void CSqLiteManager::LogOut(const QString &strMessage)
+{
+    if (m_pLog) {
+        m_pLog->LogOut("------[SqLiteManager] Error - " + strMessage);
     }
 }
 
@@ -228,7 +229,7 @@ void CSqLiteManager::UpdateLastActivityTime(
 //            .arg(pairUserNameLastActivityTime.first)
 //            .arg(pairUserNameLastActivityTime.second);
 
-//        QSqlQuery sqlQuery;
+//        QSqlQuery sqlQuery(m_sqLiteDB);
 //        if(!sqlQuery.exec(strUpdateCommand)) {
 //            QSqlError err = sqlQuery.lastError(); qDebug() << err.text();
 //            return;

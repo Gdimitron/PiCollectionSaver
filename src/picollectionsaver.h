@@ -20,6 +20,9 @@ public:
     void LogOut(const QString &strMessage);
     void FileSaved(const QString &strPath);
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event);
+
 private:
     Ui::PiCollectionSaverClass ui;
 
@@ -45,4 +48,5 @@ private slots:
     void slotPicViewerReturnPressed();
 
     void slotTabChanged(int iIndex);
+    void slotTextBrowserPicAnchorClicked(const QUrl &link);
 };

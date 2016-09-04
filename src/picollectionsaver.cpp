@@ -30,6 +30,9 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
             SLOT(slotPicViewerReturnPressed()));
     connect(ui.tabWidget, SIGNAL(currentChanged(int)), this,
             SLOT(slotTabChanged(int)));
+    connect(ui.textBrowserPicViewer, SIGNAL(anchorClicked(const QUrl &)), this,
+            SLOT(slotTextBrowserPicAnchorClicked(const QUrl &)));
+    ui.textBrowserPicViewer->installEventFilter(this);
 
     auto lstSiteType = Plugin::GetPluginTypes();
     if (lstSiteType.size() == 1) {
@@ -73,6 +76,19 @@ void PiCollectionSaver::FileSaved(const QString &strPath)
 {
     QListWidgetItem *qtItem = new QListWidgetItem(ui.listWidgetDownloaded);
     qtItem->setText(strPath);
+}
+
+bool PiCollectionSaver::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::Wheel) {
+        QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
+        QPoint numSteps = wheelEvent->angleDelta() / (8 * 15);
+        qDebug("Wheel event %d %d", numSteps.x(), numSteps.y());
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
 }
 
 void PiCollectionSaver::slotStartStopAll(void)
@@ -241,4 +257,13 @@ void PiCollectionSaver::slotTabChanged(int iIndex)
             ui.lineEditPicViewer->setText(strUserId);
         }
     }
+}
+
+void PiCollectionSaver::slotTextBrowserPicAnchorClicked(const QUrl &link)
+{
+    QString strLink = link.toString();
+    QSize szBrowser = ui.textBrowserPicViewer->size();
+    ui.textBrowserPicViewer->setHtml(QString("<img src=\"%1\" height=\"%2\" >")
+                                      .arg(strLink).arg(szBrowser.height()));
+    return;
 }

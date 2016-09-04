@@ -26,7 +26,8 @@ HEADERS += src/CommonConstants.h\
     src/picollectionsaver.h \
     src/topleveiInterfaces.h \
     src/plugin_interface.h \
-    src/plugin.h
+    src/plugin.h \
+    src/sqlitepicpreview.h
 
 SOURCES += src/CommonConstants.cpp\
     src/HttpDownloader.cpp\
@@ -40,7 +41,8 @@ SOURCES += src/CommonConstants.cpp\
     src/site.cpp \
     src/errhlpr.cpp \
     src/picollectionsaver.cpp \
-    src/plugin.cpp
+    src/plugin.cpp \
+    src/sqlitepicpreview.cpp
 
 FORMS +=\
     ui/AddNewUserDlg.ui \

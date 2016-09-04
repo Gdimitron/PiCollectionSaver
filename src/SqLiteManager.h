@@ -10,11 +10,13 @@ class CSqLiteManager : public ISqLiteManager
 {
     QSqlDatabase m_sqLiteDB;
     QString m_strTableName;
+    IMainLog *m_pLog;
 
     int m_iReturnedIndex;
 
 public:
-    CSqLiteManager(const QString &strDBFileName, const QString &strTableName);
+    CSqLiteManager(const QString &strDBFileName, const QString &strTableName,
+                   IMainLog *pLog);
     virtual ~CSqLiteManager(void);
 
     QSqlDatabase &getDb();
@@ -38,8 +40,9 @@ public:
     //void UpdateLastActivityTimeProcessed(qListPairOf2Str lstUserIdTime);
 
 private:
+    void LogOut(const QString &strMessage);
+
     qListPairOf2Str GetAllUsersIdActivityTimeImpl(int iCountMax,
             bool bFavoriteOnly = false, bool bEmptyActivityTimeOnly = false);
-
     int GetMaxTableId();
 };

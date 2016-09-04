@@ -33,7 +33,7 @@ QSharedPointer<ISqLiteManager> Site::DB()
     if (m_DB.isNull()) {
         m_DB = ISqLiteManagerCtr(m_strDestDir + "/" +
                                  QsFrWs(m_siteInfo->GetDBFileName()),
-                                 QsFrWs(m_siteInfo->GetDBTableName()));
+                                 QsFrWs(m_siteInfo->GetDBTableName()), m_log);
     }
     return m_DB;
 }
