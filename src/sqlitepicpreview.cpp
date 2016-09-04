@@ -4,9 +4,10 @@
 
 #include "sqlitepicpreview.h"
 
-const QString c_strIdClmn =	"id";
-const QString c_strFileName = "FileName";
-const QString c_strFilePreview = "FilePreview";
+static const QString c_strIdClmn =	"id";
+static const QString c_strFileName = "FileName";
+static const QString c_strFilePreview = "FilePreview";
+static const QSize c_picPrevSize(400, 400); //TODO: reduce preview size?
 
 QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
         const QString &strDBFileName, IMainLog *pLog, const QString &strFolder)
@@ -52,7 +53,7 @@ QByteArray SqLitePicPreview::GetBase64Preview(const QString &strFile)
         QBuffer buffer(&bytes);
         QImage img(m_strFolder + "/" + strFile);
         buffer.open(QIODevice::WriteOnly);
-        img.scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        img.scaled(c_picPrevSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
                 .save(&buffer, "JPG");
         AddPreviewToDB(strFile, bytes);
         retVal = bytes.toBase64();
