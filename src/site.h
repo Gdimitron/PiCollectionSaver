@@ -19,7 +19,6 @@ class Site: public ISite
     std::shared_ptr<IFileSysBldr> m_fileNameBuilder;
 
     IMainLog *m_log;
-    QSharedPointer<ISqLiteManager> m_DB;
     HttpDownloader m_httpDwnld;
     SerialPicsDownloader m_serPicDwnld;
 
@@ -32,6 +31,8 @@ public:
     const IUrlBuilder *UrlBldr() { return m_urlBuilder.get(); }
     const IFileSysBldr *FileNameBldr() { return m_fileNameBuilder.get(); }
     std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
+
+    QSharedPointer<ISqLitePicPreview> GetSqLitePreviewCache();
 
     QSharedPointer<ISqLiteManager> DB();
     ISerialPicsDownloader* SerialPicsDwnld();

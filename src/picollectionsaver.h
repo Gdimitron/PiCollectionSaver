@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include "topleveiInterfaces.h"
+#include "previewpictable.h"
 
 
 class PiCollectionSaver : public QMainWindow, IMainLog, IFileSavedCallback
@@ -26,6 +27,10 @@ protected:
 private:
     Ui::PiCollectionSaverClass ui;
 
+    QSharedPointer<PreviewPicTable> m_previewDownload;
+    QSharedPointer<PreviewPicTable> m_previewBrowse;
+    QSharedPointer<ISqLitePicPreview> m_previewSqLiteCache;
+
     QString m_strSiteType;
     // 0-stopped, 1-processing, 2-request to stop:
     std::atomic<int> m_iProccessing;
@@ -41,8 +46,6 @@ private slots:
     void slotStartStopAll(void);
     void on_actionAdd_new_user_s_triggered();
     void on_actionDownload_photo_by_ID_triggered();
-
-    void slotDownloadedItemSelectionChanged();
 
     void slotPicViewerItemSelectionChanged();
     void slotPicViewerReturnPressed();

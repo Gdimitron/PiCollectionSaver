@@ -10,19 +10,20 @@
 #include "plugin.h"
 
 #include <QDir>
+#include <QTimer>
 #include <QSqlTableModel>
+#include <QScrollBar>
 
 PiCollectionSaver::PiCollectionSaver(QWidget *parent)
     : QMainWindow(parent), m_iProccessing(0)
 {
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
+    m_previewDownload.reset(new PreviewPicTable(ui.textBrowserDownloaded));
+    m_previewBrowse.reset(new PreviewPicTable(ui.textBrowserPicViewer));
 
     connect(ui.pushButtonStartStopAll, SIGNAL(clicked()), this,
             SLOT(slotStartStopAll()));
-
-    connect(ui.listWidgetDownloaded, SIGNAL(itemSelectionChanged()), this,
-            SLOT(slotDownloadedItemSelectionChanged()));
 
     connect(ui.listWidgetPicViewer, SIGNAL(itemSelectionChanged()), this,
             SLOT(slotPicViewerItemSelectionChanged()));
@@ -74,8 +75,9 @@ void PiCollectionSaver::LogOut(const QString &strMessage)
 
 void PiCollectionSaver::FileSaved(const QString &strPath)
 {
-    QListWidgetItem *qtItem = new QListWidgetItem(ui.listWidgetDownloaded);
-    qtItem->setText(strPath);
+    QFileInfo fileInfo(strPath);
+    m_previewDownload->AddPreviewPic(strPath, m_previewSqLiteCache->
+                                     GetBase64Preview(fileInfo.fileName()));
 }
 
 bool PiCollectionSaver::eventFilter(QObject *obj, QEvent *event)
@@ -144,22 +146,26 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
         ProcessingStopped();
         return;
     }
+    //TODO: get rid of this
+    m_previewSqLiteCache = site->GetSqLitePreviewCache();
 
     site->SerialPicsDwnld()->SetOverwriteMode(false);
 
-    int iTotalUsers(site->DB()->GetUserCnt()), iProcessedUsersCnt(0);
+    auto db = site->DB();
+    int iTotalUsers(db->GetUserCnt()), iProcessedUsersCnt(0);
     const int iSqlGetMaxCnt(20);
 
     auto lstUsrsActvTime = site->DB()->GetFirstAllUsersIdActivityTime(
                 iSqlGetMaxCnt, bFavorite, bEmptyActivityTime);
     while(!lstUsrsActvTime.isEmpty()) {
         foreach(auto prUsrsActvTime, lstUsrsActvTime) {
+            m_previewDownload->StartProcessUser(prUsrsActvTime.first);
             if (!site->ProcessUser(prUsrsActvTime) || IsStopProcessing()) {
                 goto exit;
             }
             ui.progressBar->setValue(++iProcessedUsersCnt * 100 / iTotalUsers);
         }
-        lstUsrsActvTime = site->DB()->GetNextAllUsersIdActivityTime(
+        lstUsrsActvTime = db->GetNextAllUsersIdActivityTime(
                     iSqlGetMaxCnt, bFavorite, bEmptyActivityTime);
     }
 exit:
@@ -176,6 +182,8 @@ void PiCollectionSaver::on_actionAdd_new_user_s_triggered()
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
         return;
     }
+    m_previewSqLiteCache = site->GetSqLitePreviewCache();
+
     AddNewUser *addNewUsersDlg = new AddNewUser(this, &*site, this);
     addNewUsersDlg->Impl();
 
@@ -192,6 +200,7 @@ void PiCollectionSaver::on_actionDownload_photo_by_ID_triggered()
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
         return;
     }
+    m_previewSqLiteCache = site->GetSqLitePreviewCache();
     DownloadPicById *downPicByIdDlg = new DownloadPicById(this, &*site, this);
     auto qlstPrPicPageLinkFileName = downPicByIdDlg->Impl();
 
@@ -199,17 +208,6 @@ void PiCollectionSaver::on_actionDownload_photo_by_ID_triggered()
         site->SerialPicsDwnld()->SetOverwriteMode(true);
         site->DownloadPicLoopWithWait(qlstPrPicPageLinkFileName);
     }
-}
-
-void PiCollectionSaver::slotDownloadedItemSelectionChanged()
-{
-    ui.textBrowserDownloaded->clear();
-
-    QString strPicPath =
-            ui.listWidgetDownloaded->selectedItems().first()->text();
-    QSize szBrowser = ui.textBrowserDownloaded->size();
-    ui.textBrowserDownloaded->setHtml(QString("<img src=\"%1\" height=\"%2\" >")
-                                      .arg(strPicPath).arg(szBrowser.height()));
 }
 
 void PiCollectionSaver::slotPicViewerItemSelectionChanged()
@@ -230,40 +228,42 @@ void PiCollectionSaver::slotPicViewerItemSelectionChanged()
 void PiCollectionSaver::slotPicViewerReturnPressed()
 {
     ui.listWidgetPicViewer->clear();
-    QDir dir(ui.lineEditDestinationFolder->text());
+    QString destDir = ui.lineEditDestinationFolder->text();
+    QDir dir(destDir);
     QStringList lstFiles = dir.entryList((ui.lineEditPicViewer->text()
+                                          //TODO: add proper extension handling
                                           + "*.jp*g").split(" "), QDir::Files);
 
-    foreach(QString strFileName, lstFiles) {
-        QListWidgetItem *qtItem = new QListWidgetItem(ui.listWidgetPicViewer);
-        qtItem->setText(strFileName);
+    QEventLoop loop;
+    m_previewBrowse->StartProcessUser(ui.lineEditPicViewer->text());
+    for(auto strFileName: lstFiles) {
+        m_previewBrowse->AddPreviewPic(
+                    destDir + "/" + strFileName,
+                    m_previewSqLiteCache->GetBase64Preview(strFileName));
+
+        QTimer::singleShot(5/*ms*/, &loop, SLOT(quit())); // to unfreeze gui
+        loop.exec();
     }
 }
 
-void PiCollectionSaver::slotTabChanged(int iIndex)
+void PiCollectionSaver::slotTabChanged(int)
 {
-    if (iIndex == ui.tabWidget->indexOf(ui.tab_3)) {
-        if (ui.listWidgetDownloaded->selectedItems().isEmpty())
-            return;
-
-        QString strSl(ui.listWidgetDownloaded->selectedItems().first()->text());
-        int iIndex = strSl.indexOf("_");
-        if (iIndex > 0) {
-            QString strUserId(strSl.left(iIndex));
-            iIndex = strUserId.lastIndexOf("/");
-            if (iIndex != 0) {
-                strUserId = strUserId.right(strUserId.size() - iIndex - 1);
-            }
-            ui.lineEditPicViewer->setText(strUserId);
-        }
-    }
+    return;
 }
 
 void PiCollectionSaver::slotTextBrowserPicAnchorClicked(const QUrl &link)
 {
+    static int val;
     QString strLink = link.toString();
+    if (strLink == "gallery") {
+        m_previewBrowse->RepaintPreviewGallery();
+        ui.textBrowserPicViewer->verticalScrollBar()->setValue(val);
+        return;
+    }
+    val = ui.textBrowserPicViewer->verticalScrollBar()->value();
     QSize szBrowser = ui.textBrowserPicViewer->size();
-    ui.textBrowserPicViewer->setHtml(QString("<img src=\"%1\" height=\"%2\" >")
-                                      .arg(strLink).arg(szBrowser.height()));
+    ui.textBrowserPicViewer->setHtml(
+                QString("<a href=\"gallery\"><img src=\"%1\" height=\"%2\"></a>")
+                .arg(strLink).arg(szBrowser.height()));
     return;
 }

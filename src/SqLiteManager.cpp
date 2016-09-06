@@ -25,7 +25,7 @@ CSqLiteManager::CSqLiteManager(const QString &strDBFileName,
                                const QString &strTableName, IMainLog *pLog)
     : m_strTableName(strTableName), m_pLog(pLog), m_iReturnedIndex(0)
 {
-    m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE");
+    m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE", "users_connection");
     m_sqLiteDB.setDatabaseName(strDBFileName);
     if (!m_sqLiteDB.open()) {
         LogOut("Failed to open SqLite db: " + m_sqLiteDB.lastError().text());
@@ -55,6 +55,7 @@ CSqLiteManager::CSqLiteManager(const QString &strDBFileName,
 
 CSqLiteManager::~CSqLiteManager(void)
 {
+    m_sqLiteDB.close();
 }
 
 QSqlDatabase &CSqLiteManager::getDb()
@@ -66,7 +67,7 @@ bool CSqLiteManager::IsUserWithIdExist(const QString& strUserId)
 {
     QString strSelectCommand = QString("SELECT * FROM " + m_strTableName
                                        + " WHERE " + c_strUserId
-                                       + " IS " + strUserId);
+                                       + " IS '" + strUserId + "'");
     QSqlQuery sqlQuery(m_sqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
         LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
@@ -84,7 +85,6 @@ int CSqLiteManager::GetUserCnt()
 {
     return GetMaxTableId();
 }
-
 
 void CSqLiteManager::AddNewUser(const QString & strUserName,
                                 const QString & strUserId,
@@ -177,6 +177,9 @@ qListPairOf2Str CSqLiteManager::GetAllUsersIdActivityTimeImpl(
             if (iRecId == iMaxTableId) {
                 bEndReached = true;
             }
+        }
+        if (m_iReturnedIndex >= iMaxTableId) {
+            bEndReached = true;
         }
     }
     return lstReturn;

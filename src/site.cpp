@@ -11,7 +11,7 @@
 
 Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
            IFileSavedCallback *fileSavedClbk)
-    : m_strDestDir(strDestDir), m_plugin(type, log), m_log(log), m_DB(NULL),
+    : m_strDestDir(strDestDir), m_plugin(type, log), m_log(log),
       m_httpDwnld(NULL), m_serPicDwnld(NULL, log, fileSavedClbk)
 {
     // bad_function_call exception in case of problem -
@@ -28,14 +28,19 @@ std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
     return m_plugin.GetHtmlPageElm(strContent);
 }
 
+//TODO: move preview cache to another place
+QSharedPointer<ISqLitePicPreview> Site::GetSqLitePreviewCache()
+{
+    return ISqLitePicPreviewCtr(m_strDestDir + "/" +
+                                QsFrWs(SiteInfo()->GetPicPreviewDBFileName()),
+                                m_log, m_strDestDir);
+}
+
 QSharedPointer<ISqLiteManager> Site::DB()
 {
-    if (m_DB.isNull()) {
-        m_DB = ISqLiteManagerCtr(m_strDestDir + "/" +
-                                 QsFrWs(m_siteInfo->GetDBFileName()),
-                                 QsFrWs(m_siteInfo->GetDBTableName()), m_log);
-    }
-    return m_DB;
+    return ISqLiteManagerCtr(m_strDestDir + "/" +
+                             QsFrWs(m_siteInfo->GetDBFileName()),
+                             QsFrWs(m_siteInfo->GetDBTableName()), m_log);
 }
 
 ISerialPicsDownloader *Site::SerialPicsDwnld()

@@ -7,7 +7,8 @@
 static const QString c_strIdClmn =	"id";
 static const QString c_strFileName = "FileName";
 static const QString c_strFilePreview = "FilePreview";
-static const QSize c_picPrevSize(400, 400); //TODO: reduce preview size?
+static const QSize c_picPrevSize(400, 400); //TODO: Fixed this (need to respect
+                                            // aspect ratio to better view)
 
 QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
         const QString &strDBFileName, IMainLog *pLog, const QString &strFolder)
@@ -21,7 +22,7 @@ SqLitePicPreview::SqLitePicPreview(const QString &strDBFileName, IMainLog *pLog,
                                    const QString &strFolder)
     : m_pLog(pLog), m_strFolder(strFolder), m_strTableName("cache_table")
 {
-    m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE");
+    m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE", "preview_cache_connect");
     m_sqLiteDB.setDatabaseName(strDBFileName);
     if (!m_sqLiteDB.open()) {
         LogOut("Failed to open SqLite db: " + m_sqLiteDB.lastError().text());
@@ -31,18 +32,22 @@ SqLitePicPreview::SqLitePicPreview(const QString &strDBFileName, IMainLog *pLog,
     if (lstTableList.isEmpty() || lstTableList.indexOf(m_strTableName) == -1) {
         QString str = "CREATE TABLE ";
         str += m_strTableName + " ( "
-                + c_strIdClmn + " INTEGER PRIMARY KEY ASC,"		// ROWID alias
+                + c_strIdClmn + " INTEGER PRIMARY KEY ASC, "
                 + c_strFileName + " TEXT, "
-                + c_strFilePreview + " BLOB"
-                                 ");";
+                + c_strFilePreview + " BLOB );";
 
-        QSqlQuery sqlQuery;
+        QSqlQuery sqlQuery(m_sqLiteDB);
         if(!sqlQuery.exec(str)) {
             QSqlError err = sqlQuery.lastError();
             LogOut("Failed to execute sql query: " + err.text());
             return;
         }
     }
+}
+
+SqLitePicPreview::~SqLitePicPreview()
+{
+    m_sqLiteDB.close();
 }
 
 QByteArray SqLitePicPreview::GetBase64Preview(const QString &strFile)

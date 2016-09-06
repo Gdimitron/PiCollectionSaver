@@ -17,12 +17,13 @@ class SqLitePicPreview : public ISqLitePicPreview
 public:
     SqLitePicPreview(const QString &strDBFileName, IMainLog *pLog,
                      const QString &strFolder);
+    ~SqLitePicPreview();
     QByteArray GetBase64Preview(const QString &strFile);
 
 private:
     void LogOut(const QString &strMessage);
     bool IsFileNameExist(const QString& strFile);
     void AddPreviewToDB(const QString & strFile,
-                       const QByteArray &bytePicPreview);
+                        const QByteArray &bytePicPreview);
     QByteArray GetPreviewFromDB(const QString &strFile);
 };

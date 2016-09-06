@@ -97,11 +97,11 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
             }
         }
         iPicOnPageCnt = static_cast<int>(lstUserAlbumPic.size());
-        if (iPicOnPageCnt != lstUrlFileName.size() - iSzBeforeForeach){
+        if (iPicOnPageCnt != lstUrlFileName.size() - iSzBeforeForeach) {
             break;
         } else {
-            LogOut("User id " + m_strUserId +
-                   " switch to next album page(or end)");
+            LogOut(QString("From current page added %1 pic, switch to next "
+                           "album page(or end)").arg(iPicOnPageCnt));
         }
     }
 
