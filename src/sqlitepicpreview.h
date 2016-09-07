@@ -6,21 +6,24 @@
 #include "topleveiInterfaces.h"
 #include <QtSql>
 
+enum previewCacheMode { modeSpeed, modeSize };
+
 class SqLitePicPreview : public ISqLitePicPreview
 {
-    IMainLog *m_pLog;
-    QString m_strFolder;
-
+    previewCacheMode m_cacheMode;
     QSqlDatabase m_sqLiteDB;
-    const QString m_strTableName;
+    IMainLog *m_pLog;
+    IWorkDir *m_pWorkDir;
+    QString m_strWDPath;
 
 public:
-    SqLitePicPreview(const QString &strDBFileName, IMainLog *pLog,
-                     const QString &strFolder);
+    void GetBase64Preview(const QString &strFile, QByteArray &retPreview);
+    SqLitePicPreview(IMainLog *pLog, IWorkDir *pWorkDir);
     ~SqLitePicPreview();
-    QByteArray GetBase64Preview(const QString &strFile);
 
 private:
+    void InitDB();
+    void ReInitDBifPathChanged();
     void LogOut(const QString &strMessage);
     bool IsFileNameExist(const QString& strFile);
     void AddPreviewToDB(const QString & strFile,

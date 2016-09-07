@@ -60,7 +60,6 @@ struct ISiteInfo
 
     virtual const std::wstring &GetDBFileName() const = 0;
     virtual const std::wstring &GetDBTableName() const = 0;
-    virtual const std::wstring &GetPicPreviewDBFileName() const = 0;
 
     virtual bool UsersIdAndNameSame() const = 0;
     virtual bool IsPagePicUrl(const std::wstring &url) const = 0;

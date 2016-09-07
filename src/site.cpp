@@ -28,14 +28,6 @@ std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
     return m_plugin.GetHtmlPageElm(strContent);
 }
 
-//TODO: move preview cache to another place
-QSharedPointer<ISqLitePicPreview> Site::GetSqLitePreviewCache()
-{
-    return ISqLitePicPreviewCtr(m_strDestDir + "/" +
-                                QsFrWs(SiteInfo()->GetPicPreviewDBFileName()),
-                                m_log, m_strDestDir);
-}
-
 QSharedPointer<ISqLiteManager> Site::DB()
 {
     return ISqLiteManagerCtr(m_strDestDir + "/" +

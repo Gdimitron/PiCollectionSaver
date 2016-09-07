@@ -32,8 +32,6 @@ public:
     const IFileSysBldr *FileNameBldr() { return m_fileNameBuilder.get(); }
     std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
 
-    QSharedPointer<ISqLitePicPreview> GetSqLitePreviewCache();
-
     QSharedPointer<ISqLiteManager> DB();
     ISerialPicsDownloader* SerialPicsDwnld();
 

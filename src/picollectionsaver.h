@@ -11,7 +11,8 @@
 #include "previewpictable.h"
 
 
-class PiCollectionSaver : public QMainWindow, IMainLog, IFileSavedCallback
+class PiCollectionSaver
+        : public QMainWindow, IMainLog, IWorkDir, IFileSavedCallback
 {
     Q_OBJECT
 
@@ -19,6 +20,7 @@ public:
     explicit PiCollectionSaver(QWidget *parent = 0);
     ~PiCollectionSaver();
     void LogOut(const QString &strMessage);
+    const QString &GetWD() const;
     void FileSaved(const QString &strPath);
 
 protected:
@@ -27,9 +29,9 @@ protected:
 private:
     Ui::PiCollectionSaverClass ui;
 
+    QSharedPointer<ISqLitePicPreview> m_previewSqLiteCache;
     QSharedPointer<PreviewPicTable> m_previewDownload;
     QSharedPointer<PreviewPicTable> m_previewBrowse;
-    QSharedPointer<ISqLitePicPreview> m_previewSqLiteCache;
 
     QString m_strSiteType;
     // 0-stopped, 1-processing, 2-request to stop:

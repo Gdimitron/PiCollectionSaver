@@ -24,6 +24,14 @@ struct IMainLog
 };
 
 
+// interface IWorkDir
+struct IWorkDir
+{
+    virtual const QString &GetWD()const = 0;
+    virtual ~IWorkDir() {}
+};
+
+
 // interface IFileSavedCallback
 struct IFileSavedCallback
 {
@@ -85,11 +93,12 @@ extern QSharedPointer<ISerialPicsDownloader> ISerPicsDownloaderCtr(
 // interface ISqLiteThumbMngr
 struct ISqLitePicPreview
 {
-    virtual QByteArray GetBase64Preview(const QString &strFile) = 0;
+    virtual void GetBase64Preview(const QString &strFile,
+                                  QByteArray &retPreview) = 0;
     virtual ~ISqLitePicPreview() {}
 };
 extern QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
-        const QString &strDBFileName, IMainLog *pLog, const QString &strFolder);
+        IMainLog *pLog, IWorkDir *pWorkDir);
 
 // interface ISite
 struct ISite
@@ -98,8 +107,6 @@ struct ISite
     virtual const IUrlBuilder *UrlBldr() = 0;
     virtual const IFileSysBldr *FileNameBldr() = 0;
     virtual std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &) = 0;
-
-    virtual QSharedPointer<ISqLitePicPreview> GetSqLitePreviewCache() = 0;
 
     virtual QSharedPointer<ISqLiteManager> DB() = 0;
     virtual ISerialPicsDownloader* SerialPicsDwnld() = 0;

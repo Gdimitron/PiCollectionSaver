@@ -4,6 +4,9 @@
 
 #include "sqlitepicpreview.h"
 
+static const QString c_strDbFileName = "pi_collection_preview_cache.db";
+static const QString c_strDbTableName = "cache_table";
+
 static const QString c_strIdClmn =	"id";
 static const QString c_strFileName = "FileName";
 static const QString c_strFilePreview = "FilePreview";
@@ -11,27 +14,70 @@ static const QSize c_picPrevSize(400, 400); //TODO: Fixed this (need to respect
                                             // aspect ratio to better view)
 
 QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
-        const QString &strDBFileName, IMainLog *pLog, const QString &strFolder)
+        IMainLog *pLog, IWorkDir *pWorkDir)
 {
     QSharedPointer<ISqLitePicPreview> retVal(
-                new SqLitePicPreview(strDBFileName, pLog, strFolder));
+                new SqLitePicPreview(pLog, pWorkDir));
     return retVal;
 }
 
-SqLitePicPreview::SqLitePicPreview(const QString &strDBFileName, IMainLog *pLog,
-                                   const QString &strFolder)
-    : m_pLog(pLog), m_strFolder(strFolder), m_strTableName("cache_table")
+void SqLitePicPreview::GetBase64Preview(const QString &strFile,
+                                              QByteArray &retPreview)
 {
+    ReInitDBifPathChanged();
+    retPreview = GetPreviewFromDB(strFile);
+    if (retPreview.isEmpty()) {
+        QByteArray bytes;
+        QBuffer buffer(&bytes);
+        QImage img(m_strWDPath + "/" + strFile);
+        buffer.open(QIODevice::WriteOnly);
+        img.scaled(c_picPrevSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                .save(&buffer, "JPG");
+        retPreview = bytes.toBase64();
+        switch (m_cacheMode) {
+        case modeSpeed:
+            AddPreviewToDB(strFile, retPreview);
+            break;
+        case modeSize:
+            AddPreviewToDB(strFile, bytes);
+            break;
+        }
+    } else {
+        switch (m_cacheMode) {
+            case modeSpeed:
+            break;
+        case modeSize:
+            retPreview = retPreview.toBase64();
+            break;
+        }
+    }
+}
+
+SqLitePicPreview::SqLitePicPreview(IMainLog *pLog, IWorkDir *pWorkDir)
+    : m_cacheMode(modeSize), m_pLog(pLog), m_pWorkDir(pWorkDir)
+{
+}
+
+SqLitePicPreview::~SqLitePicPreview()
+{
+    m_sqLiteDB.close();
+}
+
+void SqLitePicPreview::InitDB()
+{
+    m_sqLiteDB.close();
+    auto dbPath = m_strWDPath + "/" + c_strDbFileName;
     m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE", "preview_cache_connect");
-    m_sqLiteDB.setDatabaseName(strDBFileName);
+    m_sqLiteDB.setDatabaseName(dbPath);
     if (!m_sqLiteDB.open()) {
-        LogOut("Failed to open SqLite db: " + m_sqLiteDB.lastError().text());
+        LogOut("Failed to open SqLite db(\"" + dbPath + "\"): "
+               + m_sqLiteDB.lastError().text());
         return;
     }
     QStringList lstTableList = m_sqLiteDB.tables();
-    if (lstTableList.isEmpty() || lstTableList.indexOf(m_strTableName) == -1) {
-        QString str = "CREATE TABLE ";
-        str += m_strTableName + " ( "
+    if (lstTableList.indexOf(c_strDbTableName) == -1) {
+        QString str =
+                "CREATE TABLE " + c_strDbTableName + " ( "
                 + c_strIdClmn + " INTEGER PRIMARY KEY ASC, "
                 + c_strFileName + " TEXT, "
                 + c_strFilePreview + " BLOB );";
@@ -45,29 +91,14 @@ SqLitePicPreview::SqLitePicPreview(const QString &strDBFileName, IMainLog *pLog,
     }
 }
 
-SqLitePicPreview::~SqLitePicPreview()
+void SqLitePicPreview::ReInitDBifPathChanged()
 {
-    m_sqLiteDB.close();
-}
-
-QByteArray SqLitePicPreview::GetBase64Preview(const QString &strFile)
-{
-    QByteArray retVal = GetPreviewFromDB(strFile);;
-    if (retVal.isEmpty()) {
-        QByteArray bytes;
-        QBuffer buffer(&bytes);
-        QImage img(m_strFolder + "/" + strFile);
-        buffer.open(QIODevice::WriteOnly);
-        img.scaled(c_picPrevSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
-                .save(&buffer, "JPG");
-        AddPreviewToDB(strFile, bytes);
-        retVal = bytes.toBase64();
-    } else {
-        retVal = retVal.toBase64();
+    auto workDir = m_pWorkDir->GetWD();
+    if (m_strWDPath != workDir){
+        m_strWDPath = workDir;
+        InitDB();
     }
-    return retVal;
 }
-
 
 void SqLitePicPreview::LogOut(const QString &strMessage)
 {
@@ -78,17 +109,15 @@ void SqLitePicPreview::LogOut(const QString &strMessage)
 
 bool SqLitePicPreview::IsFileNameExist(const QString &strFile)
 {
-    QString strSelectCommand = QString("SELECT * FROM " + m_strTableName
-                                       + " WHERE " + c_strFileName
-                                       + " IS " + strFile);
+    QString strSelectCommand =
+            "SELECT * FROM " + c_strDbTableName
+            + " WHERE " + c_strFileName + " IS " + strFile;
 
     QSqlQuery sqlQuery(m_sqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
         LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
         return false;
     }
-
-    // check sqlQuery.size(); and rowAffected, perhaps they works now
 
     int iResultCount = 0;
     while (sqlQuery.next()) {
@@ -103,7 +132,7 @@ void SqLitePicPreview::AddPreviewToDB(const QString & strFile,
 {
     QSqlQuery sqlQuery(m_sqLiteDB);
     QString strInsertCommand = QString(
-                "INSERT INTO " + m_strTableName
+                "INSERT INTO " + c_strDbTableName
                 + "(" + c_strFileName + ", " + c_strFilePreview
                 + ") VALUES('%1', :imageData)").arg(strFile);
 
@@ -118,10 +147,9 @@ void SqLitePicPreview::AddPreviewToDB(const QString & strFile,
 QByteArray SqLitePicPreview::GetPreviewFromDB(const QString &strFile)
 {
     QByteArray retVal;
-    QString strSelectCommand = QString("SELECT " + c_strFilePreview + " FROM "
-                                       + m_strTableName
-                                       + " WHERE " + c_strFileName
-                                       + " IS '" + strFile +"'");
+    QString strSelectCommand =
+            "SELECT " + c_strFilePreview + " FROM " + c_strDbTableName
+            + " WHERE " + c_strFileName + " IS '" + strFile +"'";
 
     QSqlQuery sqlQuery(m_sqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {

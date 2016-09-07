@@ -23,7 +23,7 @@ void PreviewPicTable::StartProcessUser(const QString &strUsr)
 
 void PreviewPicTable::AddHeading(const QString &text)
 {
-    static QString h2Tag = "<h2><u>%1</u></h2>";
+    static QString h2Tag = "<h2><u>%1</u></h2><br>";
     QString strBlock = h2Tag.arg(text);
     m_strContentForUser += strBlock;
     m_pTextBrows->textCursor().insertHtml(strBlock);
@@ -35,7 +35,7 @@ void PreviewPicTable::AddPreviewPic(const QString &picPath,
     static QString imgTag(
                 "<a href=\"%1\"><img align=\"middle\" height=\"" + c_imgHeight
                 + "\" src=\"data:image/jpg;base64,%2\"> </a>");
-    QString strBlock = imgTag.arg(picPath).arg(picBase64.toStdString().c_str());
+    QString strBlock = imgTag.arg(picPath).arg(picBase64.constData());
     m_strContentForUser += strBlock;
     m_pTextBrows->textCursor().insertHtml(strBlock);
 }

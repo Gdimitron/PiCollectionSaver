@@ -19,6 +19,8 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
 {
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
+
+    m_previewSqLiteCache = ISqLitePicPreviewCtr(this, this);
     m_previewDownload.reset(new PreviewPicTable(ui.textBrowserDownloaded));
     m_previewBrowse.reset(new PreviewPicTable(ui.textBrowserPicViewer));
 
@@ -73,11 +75,19 @@ void PiCollectionSaver::LogOut(const QString &strMessage)
     }
 }
 
+const QString &PiCollectionSaver::GetWD() const
+{
+    static QString strPath;
+    strPath = ui.lineEditDestinationFolder->text();
+    return strPath;
+}
+
 void PiCollectionSaver::FileSaved(const QString &strPath)
 {
+    QByteArray preview;
     QFileInfo fileInfo(strPath);
-    m_previewDownload->AddPreviewPic(strPath, m_previewSqLiteCache->
-                                     GetBase64Preview(fileInfo.fileName()));
+    m_previewSqLiteCache->GetBase64Preview(fileInfo.fileName(), preview);
+    m_previewDownload->AddPreviewPic(strPath, preview);
 }
 
 bool PiCollectionSaver::eventFilter(QObject *obj, QEvent *event)
@@ -139,16 +149,12 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
 
     QSharedPointer<Site> site;
     try {
-        site.reset(new Site(m_strSiteType, ui.lineEditDestinationFolder->text(),
-                            this, this));
+        site.reset(new Site(m_strSiteType, GetWD(), this, this));
     } catch (const std::bad_function_call &ex) {
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
         ProcessingStopped();
         return;
     }
-    //TODO: get rid of this
-    m_previewSqLiteCache = site->GetSqLitePreviewCache();
-
     site->SerialPicsDwnld()->SetOverwriteMode(false);
 
     auto db = site->DB();
@@ -176,14 +182,11 @@ void PiCollectionSaver::on_actionAdd_new_user_s_triggered()
 {
     QSharedPointer<Site> site;
     try {
-        site.reset(new Site(m_strSiteType, ui.lineEditDestinationFolder->text(),
-                            this, this));
+        site.reset(new Site(m_strSiteType, GetWD(), this, this));
     } catch (const std::bad_function_call &ex) {
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
         return;
     }
-    m_previewSqLiteCache = site->GetSqLitePreviewCache();
-
     AddNewUser *addNewUsersDlg = new AddNewUser(this, &*site, this);
     addNewUsersDlg->Impl();
 
@@ -194,13 +197,11 @@ void PiCollectionSaver::on_actionDownload_photo_by_ID_triggered()
 {
     QSharedPointer<Site> site;
     try {
-        site.reset(new Site(m_strSiteType, ui.lineEditDestinationFolder->text(),
-                            this, this));
+        site.reset(new Site(m_strSiteType, GetWD(), this, this));
     } catch (const std::bad_function_call &ex) {
         CErrHlpr::Critical("Failed to load site plugin.", ex.what());
         return;
     }
-    m_previewSqLiteCache = site->GetSqLitePreviewCache();
     DownloadPicById *downPicByIdDlg = new DownloadPicById(this, &*site, this);
     auto qlstPrPicPageLinkFileName = downPicByIdDlg->Impl();
 
@@ -217,7 +218,7 @@ void PiCollectionSaver::slotPicViewerItemSelectionChanged()
     if (ui.listWidgetPicViewer->selectedItems().isEmpty())
         return;
 
-    QString strPicPath = ui.lineEditDestinationFolder->text() +
+    QString strPicPath = GetWD() +
             "/" + ui.listWidgetPicViewer->selectedItems().first()->text();
 
     QSize szBrowser = ui.textBrowserPicViewer->size();
@@ -228,18 +229,18 @@ void PiCollectionSaver::slotPicViewerItemSelectionChanged()
 void PiCollectionSaver::slotPicViewerReturnPressed()
 {
     ui.listWidgetPicViewer->clear();
-    QString destDir = ui.lineEditDestinationFolder->text();
+    QString destDir = GetWD();
     QDir dir(destDir);
     QStringList lstFiles = dir.entryList((ui.lineEditPicViewer->text()
                                           //TODO: add proper extension handling
                                           + "*.jp*g").split(" "), QDir::Files);
 
     QEventLoop loop;
+    QByteArray preview;
     m_previewBrowse->StartProcessUser(ui.lineEditPicViewer->text());
     for(auto strFileName: lstFiles) {
-        m_previewBrowse->AddPreviewPic(
-                    destDir + "/" + strFileName,
-                    m_previewSqLiteCache->GetBase64Preview(strFileName));
+        m_previewSqLiteCache->GetBase64Preview(strFileName, preview);
+        m_previewBrowse->AddPreviewPic(destDir + "/" + strFileName, preview);
 
         QTimer::singleShot(5/*ms*/, &loop, SLOT(quit())); // to unfreeze gui
         loop.exec();

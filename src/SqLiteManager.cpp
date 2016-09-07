@@ -28,14 +28,14 @@ CSqLiteManager::CSqLiteManager(const QString &strDBFileName,
     m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE", "users_connection");
     m_sqLiteDB.setDatabaseName(strDBFileName);
     if (!m_sqLiteDB.open()) {
-        LogOut("Failed to open SqLite db: " + m_sqLiteDB.lastError().text());
+        LogOut("Failed to open SqLite db(\"" + strDBFileName + "\"): "
+               + m_sqLiteDB.lastError().text());
         return;
     }
     
     QStringList lstTableList = m_sqLiteDB.tables();
     if (lstTableList.isEmpty() || lstTableList.indexOf(m_strTableName) == -1) {
-        QString str = "CREATE TABLE ";
-        str += m_strTableName + " ( "
+        QString str = "CREATE TABLE " + m_strTableName + " ( "
                 + c_strIdClmn + " INTEGER PRIMARY KEY ASC,"		// ROWID alias
                 + c_strUserName + " TEXT, "
                 + c_strUserId + " TEXT, "
