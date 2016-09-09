@@ -78,7 +78,13 @@ void PiCollectionSaver::LogOut(const QString &strMessage)
 const QString &PiCollectionSaver::GetWD() const
 {
     static QString strPath;
-    strPath = ui.lineEditDestinationFolder->text();
+    auto editVal = ui.lineEditDestinationFolder->text();
+    if (strPath != editVal) {
+        strPath = editVal;
+        if (!strPath.isEmpty() && strPath[0] == '~') {
+            strPath = strPath.replace("~", QDir::homePath());
+        }
+    }
     return strPath;
 }
 
