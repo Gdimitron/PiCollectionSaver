@@ -21,6 +21,7 @@ class Site: public ISite
     IMainLog *m_log;
     HttpDownloader m_httpDwnld;
     SerialPicsDownloader m_serPicDwnld;
+    QSharedPointer<ISqLiteManager> m_db;
 
 public:
     Site(const QString &type, const QString &strDestDir, IMainLog *log,
@@ -32,7 +33,7 @@ public:
     const IFileSysBldr *FileNameBldr() { return m_fileNameBuilder.get(); }
     std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
 
-    QSharedPointer<ISqLiteManager> DB();
+    ISqLiteManager * DB();
     ISerialPicsDownloader* SerialPicsDwnld();
 
     bool DownloadPicLoopWithWait(const qListPairOf2Str &picPageLinkFileName);

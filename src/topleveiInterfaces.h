@@ -108,7 +108,7 @@ struct ISite
     virtual const IFileSysBldr *FileNameBldr() = 0;
     virtual std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &) = 0;
 
-    virtual QSharedPointer<ISqLiteManager> DB() = 0;
+    virtual ISqLiteManager *DB() = 0;
     virtual ISerialPicsDownloader* SerialPicsDwnld() = 0;
 
     virtual bool DownloadPicLoopWithWait(

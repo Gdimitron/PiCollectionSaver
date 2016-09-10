@@ -163,8 +163,7 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
     }
     site->SerialPicsDwnld()->SetOverwriteMode(false);
 
-    auto db = site->DB();
-    int iTotalUsers(db->GetUserCnt()), iProcessedUsersCnt(0);
+    int iTotalUsers(site->DB()->GetUserCnt()), iProcessedUsersCnt(0);
     const int iSqlGetMaxCnt(20);
 
     auto lstUsrsActvTime = site->DB()->GetFirstAllUsersIdActivityTime(
@@ -177,7 +176,7 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
             }
             ui.progressBar->setValue(++iProcessedUsersCnt * 100 / iTotalUsers);
         }
-        lstUsrsActvTime = db->GetNextAllUsersIdActivityTime(
+        lstUsrsActvTime = site->DB()->GetNextAllUsersIdActivityTime(
                     iSqlGetMaxCnt, bFavorite, bEmptyActivityTime);
     }
 exit:

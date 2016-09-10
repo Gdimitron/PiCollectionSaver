@@ -21,6 +21,10 @@ Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
 
     m_serPicDwnld.SetSite(this);
     m_serPicDwnld.SetDestinationFolder(strDestDir);
+
+    m_db = ISqLiteManagerCtr(m_strDestDir + "/" +
+                             QsFrWs(m_siteInfo->GetDBFileName()),
+                             QsFrWs(m_siteInfo->GetDBTableName()), m_log);
 }
 
 std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
@@ -28,11 +32,9 @@ std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
     return m_plugin.GetHtmlPageElm(strContent);
 }
 
-QSharedPointer<ISqLiteManager> Site::DB()
+ISqLiteManager *Site::DB()
 {
-    return ISqLiteManagerCtr(m_strDestDir + "/" +
-                             QsFrWs(m_siteInfo->GetDBFileName()),
-                             QsFrWs(m_siteInfo->GetDBTableName()), m_log);
+    return m_db.data();
 }
 
 ISerialPicsDownloader *Site::SerialPicsDwnld()

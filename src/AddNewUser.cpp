@@ -23,7 +23,6 @@ void AddNewUser::Impl()
     QTextStream strStreamUsers(
                 m_ui_dialog.plainTextEditNewUsers->toPlainText().toUtf8());
 
-    auto db = m_pSite->DB();
     for (QString strLine = strStreamUsers.readLine();
         !strLine.isNull();
         strLine = strStreamUsers.readLine())
@@ -65,13 +64,13 @@ void AddNewUser::Impl()
             }
         }
 
-        if (db->IsUserWithIdExist(strId)) {
+        if (m_pSite->DB()->IsUserWithIdExist(strId)) {
             m_pLog->LogOut("(AddNewUser::Impl) " + strUserName
                            + " with ID " + strId + " already exist");
             QPair<QString, QString> prUsrActiveTime;
             prUsrActiveTime.first = strId;
             prUsrActiveTime.second = "";
-            db->UpdateLastActivityTime(prUsrActiveTime);
+            m_pSite->DB()->UpdateLastActivityTime(prUsrActiveTime);
             continue;
         }
 
@@ -80,7 +79,7 @@ void AddNewUser::Impl()
 
         // do not save last active time while add new user
         // - save only while "process" pictures
-        db->AddNewUser(strUserName, strId, "");
+        m_pSite->DB()->AddNewUser(strUserName, strId, "");
     }
 }
 
