@@ -6,16 +6,13 @@
 class PreviewPicTable
 {
     QTextBrowser *m_pTextBrows;
-    QString m_strContentForUser;
+    QTextCursor m_tCursor;
     QString m_strUser;
 
 public:
     PreviewPicTable(QTextBrowser *pTextBrows);
 
-    void StartProcessUser(const QString &strUsr);
+    void Clear();
+    void NewUser(const QString &strUsr);
     void AddPreviewPic(const QString &picPath, const QByteArray &picBase64);
-    void RepaintPreviewGallery();
-
-private:
-    void AddHeading(const QString &text);
 };

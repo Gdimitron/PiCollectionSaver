@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "picollectionsaver.h"
+#include "CommonConstants.h"
 #include "errhlpr.h"
 #include "AddNewUser.h"
 #include "DownloadPicById.h"
@@ -15,14 +16,15 @@
 #include <QScrollBar>
 
 PiCollectionSaver::PiCollectionSaver(QWidget *parent)
-    : QMainWindow(parent), m_iProccessing(0)
+    : QMainWindow(parent), m_previewBrowseIter(m_previewBrowseItems),
+      m_iProccessing(0)
 {
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
 
     m_previewSqLiteCache = ISqLitePicPreviewCtr(this, this);
     m_previewDownload.reset(new PreviewPicTable(ui.textBrowserDownloaded));
-    m_previewBrowse.reset(new PreviewPicTable(ui.textBrowserPicViewer));
+    m_previewBrowse.reset(new PreviewPicTable(ui.textBrowserGal));
 
     connect(ui.pushButtonStartStopAll, SIGNAL(clicked()), this,
             SLOT(slotStartStopAll()));
@@ -33,9 +35,15 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
             SLOT(slotPicViewerReturnPressed()));
     connect(ui.tabWidget, SIGNAL(currentChanged(int)), this,
             SLOT(slotTabChanged(int)));
+    connect(ui.textBrowserDownloaded, SIGNAL(anchorClicked(const QUrl &)), this,
+            SLOT(slotTextBrowserDownloadedAnchorClicked(const QUrl &)));
+    connect(ui.textBrowserGal, SIGNAL(anchorClicked(const QUrl &)), this,
+            SLOT(slotTextBrowserGalAnchorClicked(const QUrl &)));
+
     connect(ui.textBrowserPicViewer, SIGNAL(anchorClicked(const QUrl &)), this,
             SLOT(slotTextBrowserPicAnchorClicked(const QUrl &)));
     ui.textBrowserPicViewer->installEventFilter(this);
+    ui.textBrowserPicViewer->setVisible(false);
 
     auto lstSiteType = Plugin::GetPluginTypes();
     if (lstSiteType.size() == 1) {
@@ -94,19 +102,6 @@ void PiCollectionSaver::FileSaved(const QString &strPath)
     QFileInfo fileInfo(strPath);
     m_previewSqLiteCache->GetBase64Preview(fileInfo.fileName(), preview);
     m_previewDownload->AddPreviewPic(strPath, preview);
-}
-
-bool PiCollectionSaver::eventFilter(QObject *obj, QEvent *event)
-{
-    if (event->type() == QEvent::Wheel) {
-        QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
-        QPoint numSteps = wheelEvent->angleDelta() / (8 * 15);
-        qDebug("Wheel event %d %d", numSteps.x(), numSteps.y());
-        return true;
-    } else {
-        // standard event processing
-        return QObject::eventFilter(obj, event);
-    }
 }
 
 void PiCollectionSaver::slotStartStopAll(void)
@@ -170,7 +165,7 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
                 iSqlGetMaxCnt, bFavorite, bEmptyActivityTime);
     while(!lstUsrsActvTime.isEmpty()) {
         foreach(auto prUsrsActvTime, lstUsrsActvTime) {
-            m_previewDownload->StartProcessUser(prUsrsActvTime.first);
+            m_previewDownload->NewUser(prUsrsActvTime.first);
             if (!site->ProcessUser(prUsrsActvTime) || IsStopProcessing()) {
                 goto exit;
             }
@@ -218,38 +213,36 @@ void PiCollectionSaver::on_actionDownload_photo_by_ID_triggered()
 
 void PiCollectionSaver::slotPicViewerItemSelectionChanged()
 {
-    ui.textBrowserPicViewer->clear();
-
-    if (ui.listWidgetPicViewer->selectedItems().isEmpty())
-        return;
-
-    QString strPicPath = GetWD() +
-            "/" + ui.listWidgetPicViewer->selectedItems().first()->text();
-
-    QSize szBrowser = ui.textBrowserPicViewer->size();
-    ui.textBrowserPicViewer->setHtml(QString("<img src=\"%1\" height=\"%2\" >")
-                                     .arg(strPicPath).arg(szBrowser.height()));
+    QString strSel = ui.listWidgetPicViewer->selectedItems().first()->text();
 }
 
 void PiCollectionSaver::slotPicViewerReturnPressed()
 {
-    ui.listWidgetPicViewer->clear();
+    setGalVisible();
     QString destDir = GetWD();
     QDir dir(destDir);
-    QStringList lstFiles = dir.entryList((ui.lineEditPicViewer->text()
-                                          //TODO: add proper extension handling
-                                          + "*.jp*g").split(" "), QDir::Files);
+    QStringList lstFilter;
+    for (auto element: g_imgExtensions) {
+        lstFilter << ui.lineEditPicViewer->text() + QsFrWs(element);
+    }
+    m_previewBrowseItems = dir.entryList(lstFilter, QDir::Files,
+                                         QDir::Time | QDir::Reversed);
+    m_previewBrowseIter = m_previewBrowseItems;
 
-    QEventLoop loop;
     QByteArray preview;
-    m_previewBrowse->StartProcessUser(ui.lineEditPicViewer->text());
-    for(auto strFileName: lstFiles) {
+    ui.lineEditPicViewer->setEnabled(false);
+    m_previewBrowse->Clear();
+    m_previewBrowse->NewUser(ui.lineEditPicViewer->text());
+    int processEventsDivider = 0;
+    for(auto strFileName: m_previewBrowseItems) {
         m_previewSqLiteCache->GetBase64Preview(strFileName, preview);
         m_previewBrowse->AddPreviewPic(destDir + "/" + strFileName, preview);
-
-        QTimer::singleShot(5/*ms*/, &loop, SLOT(quit())); // to unfreeze gui
-        loop.exec();
+        // to speed-up gallery loading
+        if (processEventsDivider++ % 3 == 0) {
+            qApp->processEvents();
+        }
     }
+    ui.lineEditPicViewer->setEnabled(true);
 }
 
 void PiCollectionSaver::slotTabChanged(int)
@@ -257,19 +250,128 @@ void PiCollectionSaver::slotTabChanged(int)
     return;
 }
 
+void PiCollectionSaver::slotTextBrowserDownloadedAnchorClicked(const QUrl &link)
+{
+    auto strLink = link.toString();
+    QFileInfo fileInfo(strLink);
+    auto strUserName = fileInfo.fileName().replace(QRegExp("([^_]+).*"), "\\1");
+    ui.lineEditPicViewer->setText(strUserName);
+    ui.tabWidget->setCurrentIndex(1);
+    slotPicViewerReturnPressed();
+    slotTextBrowserGalAnchorClicked(link);
+}
+
+void PiCollectionSaver::slotTextBrowserGalAnchorClicked(const QUrl &link)
+{
+    auto strLink = link.toString();
+    m_previewBrowseIter.toFront();
+    m_previewBrowseIter.findNext(QFileInfo(strLink).fileName());
+    picViewerSetPic(strLink);
+}
+
 void PiCollectionSaver::slotTextBrowserPicAnchorClicked(const QUrl &link)
 {
-    static int val;
-    QString strLink = link.toString();
-    if (strLink == "gallery") {
-        m_previewBrowse->RepaintPreviewGallery();
-        ui.textBrowserPicViewer->verticalScrollBar()->setValue(val);
+    if (!(QApplication::keyboardModifiers() & Qt::ControlModifier)) {
+        setGalVisible();
+        ui.textBrowserPicViewer->clear();
         return;
     }
-    val = ui.textBrowserPicViewer->verticalScrollBar()->value();
-    QSize szBrowser = ui.textBrowserPicViewer->size();
-    ui.textBrowserPicViewer->setHtml(
-                QString("<a href=\"gallery\"><img src=\"%1\" height=\"%2\"></a>")
-                .arg(strLink).arg(szBrowser.height()));
-    return;
+    picViewerSetPic(link.toString());
+}
+
+void PiCollectionSaver::setGalVisible()
+{
+    if (!ui.textBrowserGal->isVisible()) {
+        ui.textBrowserPicViewer->setVisible(false);
+        ui.textBrowserGal->setVisible(true);
+    }
+}
+
+void PiCollectionSaver::setPicViewerVisible()
+{
+    if (!ui.textBrowserPicViewer->isVisible()) {
+        ui.textBrowserGal->setVisible(false);
+        ui.textBrowserPicViewer->setVisible(true);
+    }
+}
+
+void PiCollectionSaver::picViewerSetPic(const QString &strUrl)
+{
+    setPicViewerVisible();
+    // show textBrowser to get correct size values
+    qApp->processEvents();
+    auto curHtml = ui.textBrowserPicViewer->toHtml();
+    if (curHtml.indexOf(strUrl) != -1 && curHtml.indexOf("height=") != -1) {
+        // same image clicked - update without scaling
+        ui.textBrowserPicViewer->setHtml(
+                    QString("<a href=\"%1\"><img src=\"%1\"></a><br>")
+                    .arg(strUrl));
+    } else {
+        auto szBrowser = ui.textBrowserPicViewer->size();
+        szBrowser.rheight() -= 30; // to prevent scroll bars
+        szBrowser.rwidth() -= 15;
+        QImage img(strUrl);
+        auto szImage = img.size();
+        auto szExpanded = szBrowser.expandedTo(szImage);
+        if (szExpanded == szBrowser) {
+            // no need to scale
+            ui.textBrowserPicViewer->setHtml(
+                        QString("<a href=\"%1\"><img src=\"%1\"></a><br>")
+                        .arg(strUrl));
+            return;
+        }
+        szImage.scale(szBrowser, Qt::KeepAspectRatio);
+        ui.textBrowserPicViewer->setHtml(
+                    QString("<a href=\"%1\"><img src=\"%1\" height=\"%2\""
+                            " width=\"%3\"></a> <br>")
+                    .arg(strUrl).arg(szImage.height()).arg(szImage.width()));
+    }
+}
+
+void PiCollectionSaver::picViewerNext(bool bValInverted)
+{
+    if (bValInverted) {
+         // direction changed, adjust java-style iterator
+        m_previewBrowseIter.next();
+    }
+    if (m_previewBrowseIter.hasNext()) {
+        auto strUrl = GetWD() + "/" + m_previewBrowseIter.next();
+        picViewerSetPic(strUrl);
+    }
+}
+
+void PiCollectionSaver::picViewerPrevios(bool bValInverted)
+{
+    if (bValInverted) {
+        // direction changed, adjust java-style iterator
+        m_previewBrowseIter.previous();
+    }
+    if (m_previewBrowseIter.hasPrevious()) {
+        auto strUrl = GetWD() + "/" + m_previewBrowseIter.previous();
+        picViewerSetPic(strUrl);
+    }
+}
+
+bool PiCollectionSaver::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::Wheel) {
+        //TODO: find out why method receive two events
+        static int filter(0);
+        if (!ui.textBrowserPicViewer->isVisible() || filter++ % 2) {
+            return true;
+        }
+        QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
+        QPoint numSteps = wheelEvent->angleDelta() / (8 * 15);
+        static int prevVal = numSteps.y();
+        if (numSteps.y() < 0) {
+            picViewerNext(prevVal * numSteps.y() < 0);
+        } else {
+            picViewerPrevios(prevVal * numSteps.y() < 0);
+        }
+        prevVal = numSteps.y();
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
 }

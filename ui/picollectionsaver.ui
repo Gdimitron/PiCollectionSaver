@@ -36,7 +36,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_1">
        <attribute name="title">
@@ -54,6 +54,9 @@
              <horstretch>0</horstretch>
              <verstretch>4</verstretch>
             </sizepolicy>
+           </property>
+           <property name="openLinks">
+            <bool>false</bool>
            </property>
           </widget>
           <widget class="QPlainTextEdit" name="plainTextEditLog">
@@ -97,12 +100,26 @@
             </item>
            </layout>
           </widget>
+          <widget class="QTextBrowser" name="textBrowserGal">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="openLinks">
+            <bool>false</bool>
+           </property>
+          </widget>
           <widget class="QTextBrowser" name="textBrowserPicViewer">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>1</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="openLinks">
+            <bool>false</bool>
            </property>
           </widget>
          </widget>

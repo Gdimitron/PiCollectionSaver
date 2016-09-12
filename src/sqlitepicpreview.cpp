@@ -10,8 +10,7 @@ static const QString c_strDbTableName = "cache_table";
 static const QString c_strIdClmn =	"id";
 static const QString c_strFileName = "FileName";
 static const QString c_strFilePreview = "FilePreview";
-static const QSize c_picPrevSize(400, 400); //TODO: Fixed this (need to respect
-                                            // aspect ratio to better view)
+static const QSize c_picPrevSize(1000, 180);
 
 QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
         IMainLog *pLog, IWorkDir *pWorkDir)
@@ -31,8 +30,21 @@ void SqLitePicPreview::GetBase64Preview(const QString &strFile,
         QBuffer buffer(&bytes);
         QImage img(m_strWDPath + "/" + strFile);
         buffer.open(QIODevice::WriteOnly);
-        img.scaled(c_picPrevSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
-                .save(&buffer, "JPG");
+        auto imgScl = img.scaled(c_picPrevSize, Qt::KeepAspectRatio,
+                                 Qt::SmoothTransformation);
+
+        // Add white line(3 pixel width) to visually separate image in gallery
+        // Couldn't find another solution. Html/css styles does not work for
+        // image in QTextBrowser
+        auto lineWidth = 3;
+        QRgb* p = reinterpret_cast<QRgb*>(
+                    imgScl.scanLine(imgScl.height() - lineWidth));
+        QColor white(Qt::white);
+        for (auto i = 0; i < imgScl.width() * lineWidth; i++) {
+            p[i] = white.rgb();
+        }
+
+        imgScl.save(&buffer, "JPG", 75);
         retPreview = bytes.toBase64();
         switch (m_cacheMode) {
         case modeSpeed:

@@ -6,3 +6,5 @@
 
 // max concurrent download threads at time(one thread download one pic)
 extern const int g_intMaxConcurrent;
+
+extern const wchar_t *g_imgExtensions[4];

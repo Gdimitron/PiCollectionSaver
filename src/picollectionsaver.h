@@ -23,14 +23,14 @@ public:
     const QString &GetWD() const;
     void FileSaved(const QString &strPath);
 
-protected:
-    bool eventFilter(QObject *obj, QEvent *event);
-
 private:
     Ui::PiCollectionSaverClass ui;
 
     QSharedPointer<ISqLitePicPreview> m_previewSqLiteCache;
     QSharedPointer<PreviewPicTable> m_previewDownload;
+
+    QStringList m_previewBrowseItems;
+    QStringListIterator m_previewBrowseIter;
     QSharedPointer<PreviewPicTable> m_previewBrowse;
 
     QString m_strSiteType;
@@ -53,5 +53,17 @@ private slots:
     void slotPicViewerReturnPressed();
 
     void slotTabChanged(int iIndex);
+    void slotTextBrowserDownloadedAnchorClicked(const QUrl &link);
+    void slotTextBrowserGalAnchorClicked(const QUrl &link);
     void slotTextBrowserPicAnchorClicked(const QUrl &link);
+
+private:
+    void setGalVisible();
+    void setPicViewerVisible();
+    void picViewerSetPic(const QString &strUrl);
+    void picViewerNext(bool bValInverted);
+    void picViewerPrevios(bool bValInverted);
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event);
 };
