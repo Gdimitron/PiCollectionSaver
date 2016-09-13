@@ -10,6 +10,7 @@
 
 #include "topleveiInterfaces.h"
 #include "HttpDownloader.h"
+#include "filesaver.h"
 
 struct stPicElement
 {
@@ -50,15 +51,12 @@ public:
 
     qListPairOf2Str GetAndClearErrPicsList();
 
-
 signals:
     void QueueEmpty();
-
 
 private slots:
     void httpSlotError(const QUrl&, const QString&);
     void httpSlotDone(int, const QUrl&, const QByteArray&);
-
 
 private:
     HttpDownloader* m_pHttp;
@@ -66,11 +64,12 @@ private:
     QList<stPicElement> m_lstMainPicsErrList;
     QMutex m_mutexForList;
 
+    FileSaver m_fs;
     bool m_bOverwrite;
+    QString m_strDestinationPath;
+
     ISite *m_pSite;
-    QString m_strDestinationFolderPath;
     IMainLog *m_pLog;
-    IFileSavedCallback *m_pFileSavedClbk;
 
     int m_iCurrentMaxOrderNumber;
 
@@ -81,22 +80,13 @@ private: // methods
                           const QString &strFileNameToSave);
 
     void ListDownloadProcessingImpl(void);
-
     void PicPageDownloadDoneProcess(const QString &strDirectPicUrl,
                                     const QByteArray& arrPic,
                                     int iHttpReplyCode);
-
     void DirectPicDownloadDoneProcess(const QString &strDirectPicUrl,
                                       const QByteArray& arrPic,
                                       int iHttpReplyCode);
-
     void ListDownloadErrorProcess(const QString &strDirectPicUrl,
                                   const QString &strError);
-
     void ProcessDoneItems();
-
-    void SaveByteArrayToDisk(const QByteArray& arrPic,
-                             const QString& strFilePath);
-
-    QString NumerateFileName(const QString& strFileName);
 };

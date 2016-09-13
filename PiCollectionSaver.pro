@@ -28,7 +28,8 @@ HEADERS += src/CommonConstants.h\
     src/plugin_interface.h \
     src/plugin.h \
     src/sqlitepicpreview.h \
-    src/previewpictable.h
+    src/previewpictable.h \
+    src/filesaver.h
 
 SOURCES += src/CommonConstants.cpp\
     src/HttpDownloader.cpp\
@@ -44,7 +45,8 @@ SOURCES += src/CommonConstants.cpp\
     src/picollectionsaver.cpp \
     src/plugin.cpp \
     src/sqlitepicpreview.cpp \
-    src/previewpictable.cpp
+    src/previewpictable.cpp \
+    src/filesaver.cpp
 
 FORMS +=\
     ui/AddNewUserDlg.ui \

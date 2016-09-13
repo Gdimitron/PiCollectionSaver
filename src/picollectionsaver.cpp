@@ -93,6 +93,9 @@ const QString &PiCollectionSaver::GetWD() const
             strPath = strPath.replace("~", QDir::homePath());
         }
     }
+    if (strPath.lastIndexOf('/') != strPath.size() - 1) {
+        strPath += '/';
+    }
     return strPath;
 }
 
@@ -222,8 +225,8 @@ void PiCollectionSaver::slotPicViewerReturnPressed()
     QString destDir = GetWD();
     QDir dir(destDir);
     QStringList lstFilter;
-    for (auto element: g_imgExtensions) {
-        lstFilter << ui.lineEditPicViewer->text() + QsFrWs(element);
+    for (auto ext: g_imgExtensions) {
+        lstFilter << ui.lineEditPicViewer->text() + "*" + QsFrWs(ext);
     }
     m_previewBrowseItems = dir.entryList(lstFilter, QDir::Files,
                                          QDir::Time | QDir::Reversed);

@@ -14,18 +14,21 @@ void PreviewPicTable::Clear()
 
 void PreviewPicTable::NewUser(const QString &strUsr)
 {
-    const static QString h2Tag = "<br><u><h2 align=\"center\">%1</h2></u><br>";
-    QString strBlock = h2Tag.arg(strUsr);
-    if (m_strUser.isEmpty()) {
-        strBlock = strBlock.replace("<br><u>", "<u>");
-    }
-    m_tCursor.insertHtml(strBlock);
     m_strUser = strUsr;
 }
 
 void PreviewPicTable::AddPreviewPic(const QString &picPath,
                                     const QByteArray &picBase64)
 {
+    if (!m_strUser.isEmpty()) {
+        const static QString h2Tag = "<br><u><h2 align=\"center\">%1</h2></u><br>";
+        QString strBlock = h2Tag.arg(m_strUser);
+        if (m_tCursor.atStart()) {
+            strBlock = strBlock.replace("<br><u>", "<u>");
+        }
+        m_tCursor.insertHtml(strBlock);
+        m_strUser.clear();
+    }
     const static QString imgTag(
                 "<a href=\"%1\"><img src=\"data:image/jpg;base64,%2\"></a> ");
     QString strBlock = imgTag.arg(picPath).arg(picBase64.constData());

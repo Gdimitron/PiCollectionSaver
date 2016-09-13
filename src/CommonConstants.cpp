@@ -7,4 +7,4 @@
 // max concurrent download threads at time(one thread download one pic)
 const int g_intMaxConcurrent(3);
 
-const wchar_t *g_imgExtensions[] = { L"*.jpg", L"*.jpeg", L"*.png", L"*.gif"};
+const wchar_t *g_imgExtensions[] = { L".jpeg", L".jpg", L".png", L".gif"};

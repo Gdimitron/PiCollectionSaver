@@ -7,6 +7,7 @@
 
 #include "errhlpr.h"
 #include "CommonUtils.h"
+#include "CommonConstants.h"
 
 QSharedPointer<IAlbmMngr> IAlbmMngrCtr(
         ISite *pSite, IMainLog *pLog, const QString &strFolder,
@@ -29,9 +30,6 @@ AlbumManager::AlbumManager(ISite *pSite, IMainLog *pLog,
       m_strUserId(strUserId), m_htmlElmUsrMain(htmlElmUserMain),
       m_pHttpDown(pHttpDown)
 {
-    if (m_strFolder.lastIndexOf('/') != m_strFolder.size() - 1) {
-        m_strFolder += '/';
-    }
 }
 
 qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
@@ -81,18 +79,24 @@ qListPairOf2Str AlbumManager::GetMissingPicPageUrlLst()
 
         for(const std::wstring &wStrPicUrl: lstUserAlbumPic) {
             auto strUrl = QsFrWs(wStrPicUrl);
-            auto strFile = QsFrWs(m_pSite->FileNameBldr()->GetPicFileName(
+            auto strFile = QsFrWs(m_pSite->FileNameBldr()->GetPicFileNameWoExt(
                                       m_strUserId.toStdWString(),
                                       m_pSite->UrlBldr()->
                                       GetPicIdFromUrl(strUrl.toStdWString())));
 
-            QFile file(m_strFolder + strFile);
-            if (!file.exists()) {
+            QString fileExist;
+            for (auto ext: g_imgExtensions) {
+                auto name(strFile + QsFrWs(ext));
+                if (QFile::exists(m_strFolder + name)) {
+                    fileExist = name;
+                    break;
+                }
+            }
+            if (fileExist.isEmpty()) {
                 Q_ASSERT(!strUrl.isEmpty() && !strFile.isEmpty());
                 lstUrlFileName.append(qMakePair(strUrl, strFile));
             } else {
-                LogOut("The " + file.fileName()
-                       + " exist, break parsing album pages");
+                LogOut("The " + fileExist + " exist, break parsing album page");
                 break;
             }
         }

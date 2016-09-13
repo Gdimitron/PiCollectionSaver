@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 #include "SerialPicsDownloader.h"
-#include <QFile>
 
 #include "CommonConstants.h"
 #include "CommonUtils.h"
 
-
 SerialPicsDownloader::SerialPicsDownloader(QObject *parent, IMainLog *pLog,
                                            IFileSavedCallback *pFileSaved)
-    : QObject(parent), m_pHttp(new HttpDownloader(this)), m_bOverwrite(false),
-      m_pSite(NULL), m_pLog(pLog), m_pFileSavedClbk(pFileSaved),
+    : QObject(parent), m_pHttp(new HttpDownloader(this)),
+      m_fs(pLog, pFileSaved), m_bOverwrite(false), m_pSite(NULL), m_pLog(pLog),
       m_iCurrentMaxOrderNumber(0)
 {
     connect(m_pHttp, SIGNAL(done(int, const QUrl&, const QByteArray&)),
@@ -42,16 +40,13 @@ void SerialPicsDownloader::SetOverwriteMode(bool bOverwrite)
 
 void SerialPicsDownloader::SetDestinationFolder(const QString& strDstFolderPath)
 {
-    m_strDestinationFolderPath = strDstFolderPath;
-    if (strDstFolderPath.lastIndexOf('/') != strDstFolderPath.size() - 1) {
-        m_strDestinationFolderPath += '/';
-    }
+    m_strDestinationPath = strDstFolderPath;
 }
 
 void SerialPicsDownloader::AddPicPageUrlLstToQueue(
         qListPairOf2Str &lstPicPageUrlFileName)
 {
-    foreach(auto pairElement, lstPicPageUrlFileName) {
+    for(auto pairElement: lstPicPageUrlFileName) {
         AddElementToList(pairElement.first, pairElement.second);
     }
     ListDownloadProcessingImpl();
@@ -60,7 +55,7 @@ void SerialPicsDownloader::AddPicPageUrlLstToQueue(
 qListPairOf2Str SerialPicsDownloader::GetAndClearErrPicsList()
 {
     qListPairOf2Str ret;
-    foreach(auto it, m_lstMainPicsErrList) {
+    for(auto it: m_lstMainPicsErrList) {
         ret.append(QPair<QString, QString>(it.m_strPicPageUrl, it.m_strError));
     }
     m_lstMainPicsErrList.clear();
@@ -83,7 +78,7 @@ void SerialPicsDownloader::AddElementToList(const QString &strPicPageUrl,
                        << strPicPageUrl
                        << " strFileNameToSave = " << strFileNameToSave;*/
 
-    // paranoid check - do not to download same
+    // paranoid check - do not download same again
     for (auto it = m_lstMainPicsList.cbegin();
          it != m_lstMainPicsList.cend();
          ++it) {
@@ -104,7 +99,6 @@ void SerialPicsDownloader::AddElementToList(const QString &strPicPageUrl,
 void SerialPicsDownloader::ListDownloadProcessingImpl(void)
 {
     QMutexLocker locker(&m_mutexForList);
-
     for (auto it = m_lstMainPicsList.begin();
          it != m_lstMainPicsList.end();
          ++it) {
@@ -118,8 +112,7 @@ void SerialPicsDownloader::ListDownloadProcessingImpl(void)
 void SerialPicsDownloader::httpSlotError(const QUrl& url, const QString& strErr)
 {
     QDebug(QtDebugMsg) << "httpSlotError; ThredId = "
-                       << QThread::currentThreadId()
-                       << " Error = " << strErr;
+                       << QThread::currentThreadId() << " Error = " << strErr;
 
     ListDownloadErrorProcess(url.toString(), strErr);
 }
@@ -131,11 +124,6 @@ void SerialPicsDownloader::httpSlotDone(int iRplStatCode, const QUrl& url,
                        << QThread::currentThreadId()
                        << " Status code = " << iRplStatusCode
                        << " Qurl = " << url;*/
-
-    if (m_strDestinationFolderPath.isEmpty()) {
-        ListDownloadErrorProcess(url.toString(), "Dest folder is empty.");
-        return;
-    }
 
     if (iRplStatCode == 200) {
         auto strUrl = url.toString().toStdWString();
@@ -160,7 +148,6 @@ void SerialPicsDownloader::PicPageDownloadDoneProcess(
         int iHttpReplyCode)
 {
     QMutexLocker locker(&m_mutexForList);
-
     for (auto it = m_lstMainPicsList.begin();
          it != m_lstMainPicsList.end();
          ++it) {
@@ -198,7 +185,6 @@ void SerialPicsDownloader::DirectPicDownloadDoneProcess(
         int iHttpReplyCode)
 {
     QMutexLocker locker(&m_mutexForList);
-
     for (auto it = m_lstMainPicsList.begin();
          it != m_lstMainPicsList.end();
          ++it) {
@@ -206,12 +192,10 @@ void SerialPicsDownloader::DirectPicDownloadDoneProcess(
             if (arrPic.size() < 12 * 1024) {
                 if (!it->m_bPicForBrowser) {
                     LogOut("WARNING: Image size for Url \""
-                           + it->m_strPicPageUrl
-                           + "\" is less than 12KB. "
+                           + it->m_strPicPageUrl + "\" is less than 12KB. "
                              "Try to obtain pic for browser");
 
                     it->m_bPicForBrowser = true;
-
                     it->m_strDirectPicUrl = QsFrWs(
                                 it->m_ptrHtmlElmtPicPage->
                                 GetShownInBrowserDirectPicUrl());
@@ -236,7 +220,6 @@ void SerialPicsDownloader::ListDownloadErrorProcess(const QString &strUrl,
         const QString &strError)
 {
     QMutexLocker locker(&m_mutexForList);
-
     LogOut("Download error. Url \"" + strUrl
            + "\". Error message \"" + strError + "\".");
 
@@ -255,13 +238,12 @@ void SerialPicsDownloader::ListDownloadErrorProcess(const QString &strUrl,
 void SerialPicsDownloader::ProcessDoneItems()
 {
     QMutexLocker locker(&m_mutexForList);
-
     for (auto it = m_lstMainPicsList.begin();
          it != m_lstMainPicsList.end();) {
         if (it->m_bDownloadDone == true) {
             // download done - save and erase from list
-            SaveByteArrayToDisk(it->m_arrPicContent, m_strDestinationFolderPath
-                                + it->m_strFileNameToSave);
+            m_fs.SaveContentToFile(it->m_arrPicContent, m_strDestinationPath
+                                + it->m_strFileNameToSave, m_bOverwrite);
 
             /*QDebug(QtDebugMsg) << "ListSerialDiskSaveImpl; ERASE ThredId = "
                                << QThread::currentThreadId()
@@ -285,59 +267,4 @@ void SerialPicsDownloader::ProcessDoneItems()
     if(m_lstMainPicsList.isEmpty()) {
         emit QueueEmpty();
     }
-}
-
-void SerialPicsDownloader::SaveByteArrayToDisk(const QByteArray& arrPic,
-                                               const QString& strFilePath)
-{
-    QFile file(strFilePath);
-    if (file.exists() && m_bOverwrite) {
-        QFile::rename(strFilePath, NumerateFileName(strFilePath));
-    }
-    if (file.exists()) {
-        if (file.size() == arrPic.size()) {
-            LogOut("(disk) - Warning - file with same name and size exist \""
-                   + file.fileName() + "\". Skipping...");
-            return;
-        }
-        LogOut("(disk) - Warning - file with same name and DIFFERENT size"
-               + QString("(exist '%1', new '%2') exist \"%3\". Numerate...")
-               .arg(file.size()).arg(arrPic.size()).arg(file.fileName()));
-        QString strNumFilePath = NumerateFileName(strFilePath);
-        if (strNumFilePath.isEmpty()) {
-            LogOut("(disk) - Error - numerate function return empty name.");
-            return;
-        }
-        file.setFileName(strNumFilePath);
-
-    }
-
-    if (file.open(QIODevice::WriteOnly)) {
-        if (file.write(arrPic) == arrPic.size()) {
-            LogOut("(disk) - " + file.fileName() + " download success.");
-            m_pFileSavedClbk->FileSaved(file.fileName());
-        } else {
-            LogOut("(disk) - Error - failed to write file \""
-                   + file.fileName() + "\". Error string:"
-                   + file.errorString());
-        }
-    } else {
-        LogOut("(disk) - Error - failed to open file \""
-               + file.fileName() + "\". Error string:"
-               + file.errorString());
-    }
-}
-
-// numerate file name unless file with this name does not exist
-QString SerialPicsDownloader::NumerateFileName(const QString& strFileName)
-{
-    QString strNumFileName;
-    for (int i = 1; i < 1000; i++) {
-        //TODO: jpeg to proper extension
-        strNumFileName = QString("%1_%2.jpeg").arg(strFileName).arg(i);
-        QFile file(strNumFileName);
-        if (!file.exists())
-            return strNumFileName;
-    }
-    return "";
 }

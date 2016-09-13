@@ -76,7 +76,7 @@ typedef std::function<ISiteInfoCtr_t> f_ISiteInfoCtr;
 // interface IFileSysBldr some function to build file name
 struct IFileSysBldr
 {
-    virtual std::wstring GetPicFileName(
+    virtual std::wstring GetPicFileNameWoExt(
             const std::wstring& strUserId,
             const std::wstring& strFileId) const = 0;
 

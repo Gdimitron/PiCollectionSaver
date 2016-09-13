@@ -93,8 +93,8 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
                       .arg(strLastActiveTime).arg(prUsrsActvTime.second));
 
         auto albManager(IAlbmMngrCtr(this, m_log, m_strDestDir,
-                                     prUsrsActvTime.first,
-                                     htmlElmt, m_httpDwnld));
+                                     prUsrsActvTime.first, htmlElmt,
+                                     m_httpDwnld));
         qlstPrPicPageLinkFileName = albManager->GetMissingPicPageUrlLst();
     } catch (const parse_ex &ex) {
         if (CErrHlpr::IgnMsgBox("Parse error: " + QsFrWs(ex.strWhat()),
@@ -106,16 +106,16 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
 
     if (!qlstPrPicPageLinkFileName.isEmpty()) {
         if (!DownloadPicLoopWithWait(qlstPrPicPageLinkFileName)) {
-            if (CErrHlpr::IgnMsgBox("Could not download pics",
-                                    "User: " + QsFrWs(htmlElmt->GetUserName())))
-            {
+            if (CErrHlpr::IgnMsgBox(
+                        "Could not download pics",
+                        "User: " + QsFrWs(htmlElmt->GetUserName()))) {
                 return true;
             }
             return false;
         }
     }
-    m_log->LogOut("Update last active time (" + QsFrWs(htmlElmt->GetUserName())
-                  + ")");
+    m_log->LogOut("Update last active time ("
+                  + QsFrWs(htmlElmt->GetUserName()) + ")");
     prUsrsActvTime.second = strLastActiveTime;
     DB()->UpdateLastActivityTime(prUsrsActvTime);
 

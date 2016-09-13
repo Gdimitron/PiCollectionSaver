@@ -85,7 +85,7 @@ qListPairOf2Str DownloadPicById::Impl()
             break;
         }
         Q_ASSERT(!strUserId.isEmpty());
-        auto strFile = QsFrWs(m_pSite->FileNameBldr()->GetPicFileName(
+        auto strFile = QsFrWs(m_pSite->FileNameBldr()->GetPicFileNameWoExt(
                                   strUserId.toStdWString(),
                                   m_pSite->UrlBldr()->GetPicIdFromUrl(
                                       strPicPageUrl.toStdWString())));
