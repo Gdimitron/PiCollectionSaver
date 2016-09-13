@@ -231,6 +231,7 @@ void PiCollectionSaver::slotPicViewerReturnPressed()
     m_previewBrowseItems = dir.entryList(lstFilter, QDir::Files,
                                          QDir::Time | QDir::Reversed);
     m_previewBrowseIter = m_previewBrowseItems;
+    m_previewBrowseIter.toFront();
 
     QByteArray preview;
     ui.lineEditPicViewer->setEnabled(false);
@@ -276,7 +277,6 @@ void PiCollectionSaver::slotTextBrowserPicAnchorClicked(const QUrl &link)
 {
     if (!(QApplication::keyboardModifiers() & Qt::ControlModifier)) {
         setGalVisible();
-        ui.textBrowserPicViewer->clear();
         return;
     }
     picViewerSetPic(link.toString());
@@ -286,6 +286,7 @@ void PiCollectionSaver::setGalVisible()
 {
     if (!ui.textBrowserGal->isVisible()) {
         ui.textBrowserPicViewer->setVisible(false);
+        ui.textBrowserPicViewer->clear();
         ui.textBrowserGal->setVisible(true);
     }
 }
