@@ -69,18 +69,25 @@ PiCollectionSaver::~PiCollectionSaver()
 {
 }
 
-void PiCollectionSaver::LogOut(const QString &strMessage)
+void PiCollectionSaver::LogOut(const QString &strMessage, bool bOnOneLine)
 {
     QDebug(QtDebugMsg) << strMessage;
 
+    QString strFormatMsg;
     if (strMessage.contains("warning", Qt::CaseInsensitive)) {
-        ui.plainTextEditLog->appendHtml("<b>" + strMessage + "</b>");
+        strFormatMsg = "<b>" + strMessage + "</b>";
     } else if (strMessage.contains("error", Qt::CaseInsensitive)) {
-        ui.plainTextEditLog->appendHtml("<b><font color=\"red\">" +
-                                        strMessage + "</font></b>");
+        strFormatMsg = "<b><font color=\"red\">" + strMessage + "</font></b>";
     } else {
-        ui.plainTextEditLog->appendHtml(strMessage);
+        strFormatMsg = strMessage;
     }
+    static QString s_strOneLineMsg;
+    if (bOnOneLine) {
+        s_strOneLineMsg += strFormatMsg;
+        return;
+    }
+    ui.plainTextEditLog->appendHtml(s_strOneLineMsg + strFormatMsg);
+    s_strOneLineMsg.clear();
 }
 
 const QString &PiCollectionSaver::GetWD() const

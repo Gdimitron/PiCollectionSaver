@@ -60,7 +60,7 @@ bool Site::DownloadPicLoopWithWait(const qListPairOf2Str &picPageLinkFileName)
 
 bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
 {
-    m_log->LogOut("Process " + prUsrsActvTime.first);
+    m_log->LogOut("Process " + prUsrsActvTime.first + "... ", true);
 
     auto strMainPageUrl = QsFrWs(UrlBldr()->GetMainUserPageUrlById(
                 prUsrsActvTime.first.toStdWString()));
@@ -76,20 +76,22 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
 
     auto htmlElmt(HtmlPageElmCtr(strRep));
     Q_ASSERT(!htmlElmt->IsSelfNamePresent());
+    QString strUserName( m_siteInfo->UsersIdAndNameSame() ?
+                             "" : QsFrWs(htmlElmt->GetUserName()));
 
     QString strLastActiveTime;
     qListPairOf2Str qlstPrPicPageLinkFileName;
     try {
         strLastActiveTime = QsFrWs(htmlElmt->GetLastActivityTime());
         if(strLastActiveTime == prUsrsActvTime.second) {
-            m_log->LogOut("Last active time match(" +
-                          QsFrWs(htmlElmt->GetUserName()) + ") switch to next");
+            m_log->LogOut(QString("%1 last active time match - switch to next")
+                          .arg(strUserName));
             return true;
         }
 
-        m_log->LogOut(QString("Last active time does not match(%1 \"%2\" vs"
+        m_log->LogOut(QString("%1 last active time does not match(\"%2\" vs"
                               " \"%3\") - parse common album")
-                      .arg(QsFrWs(htmlElmt->GetUserName()))
+                      .arg(strUserName)
                       .arg(strLastActiveTime).arg(prUsrsActvTime.second));
 
         auto albManager(IAlbmMngrCtr(this, m_log, m_strDestDir,

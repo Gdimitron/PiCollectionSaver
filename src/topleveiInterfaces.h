@@ -19,7 +19,7 @@ typedef QList< QPair<QString, QString> > qListPairOf2Str;
 // interface IMainLog
 struct IMainLog
 {
-    virtual void LogOut(const QString &strMessage) = 0;
+    virtual void LogOut(const QString &strMessage, bool bOnOneLine = false) = 0;
     virtual ~IMainLog() {}
 };
 

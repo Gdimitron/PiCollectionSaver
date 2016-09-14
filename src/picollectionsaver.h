@@ -19,7 +19,7 @@ class PiCollectionSaver
 public:
     explicit PiCollectionSaver(QWidget *parent = 0);
     ~PiCollectionSaver();
-    void LogOut(const QString &strMessage);
+    void LogOut(const QString &strMessage, bool bOnOneLine = false);
     const QString &GetWD() const;
     void FileSaved(const QString &strPath);
 
