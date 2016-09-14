@@ -30,7 +30,7 @@ private:
     QSharedPointer<PreviewPicTable> m_previewDownload;
 
     QStringList m_previewBrowseItems;
-    QStringListIterator m_previewBrowseIter;
+    QSharedPointer<QStringListIterator> m_pPrviewBrowseIter;
     QSharedPointer<PreviewPicTable> m_previewBrowse;
 
     QString m_strSiteType;
@@ -60,6 +60,8 @@ private slots:
 private:
     void setGalVisible();
     void setPicViewerVisible();
+
+    void initPreviewBrowseItems(const QStringList &lstItems);
     void picViewerSetPic(const QString &strUrl);
     void picViewerNext(bool bValInverted);
     void picViewerPrevios(bool bValInverted);

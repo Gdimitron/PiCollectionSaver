@@ -16,8 +16,7 @@
 #include <QScrollBar>
 
 PiCollectionSaver::PiCollectionSaver(QWidget *parent)
-    : QMainWindow(parent), m_previewBrowseIter(m_previewBrowseItems),
-      m_iProccessing(0)
+    : QMainWindow(parent), m_iProccessing(0)
 {
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
@@ -44,6 +43,7 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
             SLOT(slotTextBrowserPicAnchorClicked(const QUrl &)));
     ui.textBrowserPicViewer->installEventFilter(this);
     ui.textBrowserPicViewer->setVisible(false);
+    initPreviewBrowseItems(QStringList());
 
     auto lstSiteType = Plugin::GetPluginTypes();
     if (lstSiteType.size() == 1) {
@@ -228,10 +228,8 @@ void PiCollectionSaver::slotPicViewerReturnPressed()
     for (auto ext: g_imgExtensions) {
         lstFilter << ui.lineEditPicViewer->text() + "*" + QsFrWs(ext);
     }
-    m_previewBrowseItems = dir.entryList(lstFilter, QDir::Files,
-                                         QDir::Time | QDir::Reversed);
-    m_previewBrowseIter = m_previewBrowseItems;
-    m_previewBrowseIter.toFront();
+    initPreviewBrowseItems(dir.entryList(lstFilter, QDir::Files,
+                                         QDir::Time | QDir::Reversed));
 
     QByteArray preview;
     ui.lineEditPicViewer->setEnabled(false);
@@ -268,8 +266,8 @@ void PiCollectionSaver::slotTextBrowserDownloadedAnchorClicked(const QUrl &link)
 void PiCollectionSaver::slotTextBrowserGalAnchorClicked(const QUrl &link)
 {
     auto strLink = link.toString();
-    m_previewBrowseIter.toFront();
-    m_previewBrowseIter.findNext(QFileInfo(strLink).fileName());
+    m_pPrviewBrowseIter->toFront();
+    m_pPrviewBrowseIter->findNext(QFileInfo(strLink).fileName());
     picViewerSetPic(strLink);
 }
 
@@ -297,6 +295,12 @@ void PiCollectionSaver::setPicViewerVisible()
         ui.textBrowserGal->setVisible(false);
         ui.textBrowserPicViewer->setVisible(true);
     }
+}
+
+void PiCollectionSaver::initPreviewBrowseItems(const QStringList &lstItems)
+{
+    m_previewBrowseItems = lstItems;
+    m_pPrviewBrowseIter.reset(new QStringListIterator(m_previewBrowseItems));
 }
 
 void PiCollectionSaver::picViewerSetPic(const QString &strUrl)
@@ -334,24 +338,24 @@ void PiCollectionSaver::picViewerSetPic(const QString &strUrl)
 
 void PiCollectionSaver::picViewerNext(bool bValInverted)
 {
-    if (bValInverted) {
+    if (bValInverted && m_pPrviewBrowseIter->hasNext()) {
          // direction changed, adjust java-style iterator
-        m_previewBrowseIter.next();
+        m_pPrviewBrowseIter->next();
     }
-    if (m_previewBrowseIter.hasNext()) {
-        auto strUrl = GetWD() + "/" + m_previewBrowseIter.next();
+    if (m_pPrviewBrowseIter->hasNext()) {
+        auto strUrl = GetWD() + "/" + m_pPrviewBrowseIter->next();
         picViewerSetPic(strUrl);
     }
 }
 
 void PiCollectionSaver::picViewerPrevios(bool bValInverted)
 {
-    if (bValInverted) {
+    if (bValInverted && m_pPrviewBrowseIter->hasPrevious()) {
         // direction changed, adjust java-style iterator
-        m_previewBrowseIter.previous();
+        m_pPrviewBrowseIter->previous();
     }
-    if (m_previewBrowseIter.hasPrevious()) {
-        auto strUrl = GetWD() + "/" + m_previewBrowseIter.previous();
+    if (m_pPrviewBrowseIter->hasPrevious()) {
+        auto strUrl = GetWD() + "/" + m_pPrviewBrowseIter->previous();
         picViewerSetPic(strUrl);
     }
 }
