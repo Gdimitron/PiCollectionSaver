@@ -93,8 +93,7 @@ extern QSharedPointer<ISerialPicsDownloader> ISerPicsDownloaderCtr(
 // interface ISqLiteThumbMngr
 struct ISqLitePicPreview
 {
-    virtual void GetBase64Preview(const QString &strFile,
-                                  QByteArray &retPreview) = 0;
+    virtual void GetPreview(const QString &strFile, QByteArray &retPreview) = 0;
     virtual ~ISqLitePicPreview() {}
 };
 extern QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(

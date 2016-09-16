@@ -4,6 +4,8 @@
 
 #include "sqlitepicpreview.h"
 
+#include <QImageReader>
+
 static const QString c_strDbFileName = "pi_collection_preview_cache.db";
 static const QString c_strDbTableName = "cache_table";
 
@@ -20,22 +22,23 @@ QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
     return retVal;
 }
 
-void SqLitePicPreview::GetBase64Preview(const QString &strFile,
-                                              QByteArray &retPreview)
+void SqLitePicPreview::GetPreview(const QString &strFile,
+                                  QByteArray &retPreview)
 {
     ReInitDBifPathChanged();
     retPreview = GetPreviewFromDB(strFile);
     if (retPreview.isEmpty()) {
-        QByteArray bytes;
-        QBuffer buffer(&bytes);
-        QImage img(m_strWDPath + "/" + strFile);
-        buffer.open(QIODevice::WriteOnly);
+        QImage img;
+        QImageReader imgReader(m_strWDPath + "/" + strFile);
+        if (!imgReader.read(&img)) {
+            LogOut("Failed to load image \"" + m_strWDPath + "/" + strFile
+                   + "\" Error: " + imgReader.errorString());
+        }
         auto imgScl = img.scaled(c_picPrevSize, Qt::KeepAspectRatio,
                                  Qt::SmoothTransformation);
-
         // Add white line(3 pixel width) to visually separate image in gallery
-        // Couldn't find another solution. Html/css styles does not work for
-        // image in QTextBrowser
+        // Couldn't find another solution. Appropriate html/css styles does not
+        // work for image in QTextBrowser
         auto lineWidth = 3;
         QRgb* p = reinterpret_cast<QRgb*>(
                     imgScl.scanLine(imgScl.height() - lineWidth));
@@ -43,30 +46,15 @@ void SqLitePicPreview::GetBase64Preview(const QString &strFile,
         for (auto i = 0; i < imgScl.width() * lineWidth; i++) {
             p[i] = white.rgb();
         }
-
+        QBuffer buffer(&retPreview);
+        buffer.open(QIODevice::WriteOnly);
         imgScl.save(&buffer, "JPG", 75);
-        retPreview = bytes.toBase64();
-        switch (m_cacheMode) {
-        case modeSpeed:
-            AddPreviewToDB(strFile, retPreview);
-            break;
-        case modeSize:
-            AddPreviewToDB(strFile, bytes);
-            break;
-        }
-    } else {
-        switch (m_cacheMode) {
-            case modeSpeed:
-            break;
-        case modeSize:
-            retPreview = retPreview.toBase64();
-            break;
-        }
+        AddPreviewToDB(strFile, retPreview);
     }
 }
 
 SqLitePicPreview::SqLitePicPreview(IMainLog *pLog, IWorkDir *pWorkDir)
-    : m_cacheMode(modeSize), m_pLog(pLog), m_pWorkDir(pWorkDir)
+    : m_pLog(pLog), m_pWorkDir(pWorkDir)
 {
 }
 

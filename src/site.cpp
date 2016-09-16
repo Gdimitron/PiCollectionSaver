@@ -22,8 +22,7 @@ Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
     m_serPicDwnld.SetSite(this);
     m_serPicDwnld.SetDestinationFolder(strDestDir);
 
-    m_db = ISqLiteManagerCtr(m_strDestDir + "/" +
-                             QsFrWs(m_siteInfo->GetDBFileName()),
+    m_db = ISqLiteManagerCtr(m_strDestDir + QsFrWs(m_siteInfo->GetDBFileName()),
                              QsFrWs(m_siteInfo->GetDBTableName()), m_log);
 }
 

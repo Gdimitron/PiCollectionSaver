@@ -14,6 +14,7 @@
 #include <QTimer>
 #include <QSqlTableModel>
 #include <QScrollBar>
+#include <QElapsedTimer>
 
 PiCollectionSaver::PiCollectionSaver(QWidget *parent)
     : QMainWindow(parent), m_iProccessing(0)
@@ -110,7 +111,7 @@ void PiCollectionSaver::FileSaved(const QString &strPath)
 {
     QByteArray preview;
     QFileInfo fileInfo(strPath);
-    m_previewSqLiteCache->GetBase64Preview(fileInfo.fileName(), preview);
+    m_previewSqLiteCache->GetPreview(fileInfo.fileName(), preview);
     m_previewDownload->AddPreviewPic(strPath, preview);
 }
 
@@ -238,19 +239,31 @@ void PiCollectionSaver::slotPicViewerReturnPressed()
     initPreviewBrowseItems(dir.entryList(lstFilter, QDir::Files,
                                          QDir::Time | QDir::Reversed));
 
-    QByteArray preview;
+    QElapsedTimer timer;
+    timer.start();
     ui.lineEditPicViewer->setEnabled(false);
+    auto strEditValue = ui.lineEditPicViewer->text();
     m_previewBrowse->Clear();
+    m_previewBrowse->CachedModeEnable(true);
     m_previewBrowse->NewUser(ui.lineEditPicViewer->text());
-    int processEventsDivider = 0;
+    QByteArray preview;
+    int processed(0);
     for(auto strFileName: m_previewBrowseItems) {
-        m_previewSqLiteCache->GetBase64Preview(strFileName, preview);
-        m_previewBrowse->AddPreviewPic(destDir + "/" + strFileName, preview);
-        // to speed-up gallery loading
-        if (processEventsDivider++ % 3 == 0) {
-            qApp->processEvents();
+        m_previewSqLiteCache->GetPreview(strFileName, preview);
+        m_previewBrowse->AddPreviewPic(destDir + strFileName, preview);
+        qApp->processEvents();
+        if (++processed % 300 == 0) {
+            double speedImgSec = timer.elapsed() / 1000;
+            speedImgSec = processed / speedImgSec;
+            ui.lineEditPicViewer->setText(QString("%1/%2 (%3 img/sec)")
+                                          .arg(processed)
+                                          .arg(m_previewBrowseItems.size())
+                                          .arg(speedImgSec));
         }
     }
+    qDebug() << timer.elapsed();
+    m_previewBrowse->CachedModeEnable(false);
+    ui.lineEditPicViewer->setText(strEditValue);
     ui.lineEditPicViewer->setEnabled(true);
 }
 
@@ -350,7 +363,7 @@ void PiCollectionSaver::picViewerNext(bool bValInverted)
         m_pPrviewBrowseIter->next();
     }
     if (m_pPrviewBrowseIter->hasNext()) {
-        auto strUrl = GetWD() + "/" + m_pPrviewBrowseIter->next();
+        auto strUrl = GetWD() + m_pPrviewBrowseIter->next();
         picViewerSetPic(strUrl);
     }
 }
@@ -362,7 +375,7 @@ void PiCollectionSaver::picViewerPrevios(bool bValInverted)
         m_pPrviewBrowseIter->previous();
     }
     if (m_pPrviewBrowseIter->hasPrevious()) {
-        auto strUrl = GetWD() + "/" + m_pPrviewBrowseIter->previous();
+        auto strUrl = GetWD() + m_pPrviewBrowseIter->previous();
         picViewerSetPic(strUrl);
     }
 }
