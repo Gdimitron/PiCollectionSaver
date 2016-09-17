@@ -20,7 +20,7 @@ public:
     explicit DownloadPicById(QWidget *parent, ISite *pSite, IMainLog *pLog);
     ~DownloadPicById();
 
-    qListPairOf2Str Impl();
+    QMap<QString, QString> Impl();
     
 private:
     Ui::DirectPicPageDownload *ui;

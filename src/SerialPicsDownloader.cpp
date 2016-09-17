@@ -44,22 +44,23 @@ void SerialPicsDownloader::SetDestinationFolder(const QString& strDstFolderPath)
 }
 
 void SerialPicsDownloader::AddPicPageUrlLstToQueue(
-        qListPairOf2Str &lstPicPageUrlFileName)
+        const QMap<QString, QString> &mapPicPageUrlFileName)
 {
-    for(auto pairElement: lstPicPageUrlFileName) {
-        AddElementToList(pairElement.first, pairElement.second);
+    for (auto i = mapPicPageUrlFileName.constBegin();
+         i != mapPicPageUrlFileName.constEnd(); ++i) {
+        AddElementToList(i.key(), i.value());
     }
     ListDownloadProcessingImpl();
 }
 
-qListPairOf2Str SerialPicsDownloader::GetAndClearErrPicsList()
+QMap<QString, QString> SerialPicsDownloader::GetAndClearErrPicsList()
 {
-    qListPairOf2Str ret;
+    QMap<QString, QString> res;
     for(auto it: m_lstMainPicsErrList) {
-        ret.append(QPair<QString, QString>(it.m_strPicPageUrl, it.m_strError));
+        res[it.m_strPicPageUrl] = it.m_strError;
     }
     m_lstMainPicsErrList.clear();
-    return ret;
+    return res;
 }
 
 void SerialPicsDownloader::LogOut(const QString &strMessage)

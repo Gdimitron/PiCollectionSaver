@@ -28,14 +28,16 @@ public:
          IFileSavedCallback *fileSavedClbk );
     virtual ~Site() {}
 
-    const ISiteInfo *SiteInfo() { return m_siteInfo.get(); }
-    const IUrlBuilder *UrlBldr() { return m_urlBuilder.get(); }
-    const IFileSysBldr *FileNameBldr() { return m_fileNameBuilder.get(); }
-    std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &strContent);
+    const ISiteInfo *SiteInfo() const { return m_siteInfo.get(); }
+    const IUrlBuilder *UrlBldr() const { return m_urlBuilder.get(); }
+    const IFileSysBldr *FileNameBldr() const { return m_fileNameBuilder.get(); }
+    std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(
+            const QString &strContent) const;
 
     ISqLiteManager * DB();
     ISerialPicsDownloader* SerialPicsDwnld();
 
-    bool DownloadPicLoopWithWait(const qListPairOf2Str &picPageLinkFileName);
-    bool ProcessUser(QPair<QString, QString> prUsrsActvTime);
+    bool DownloadPicLoopWithWait(
+            const QMap<QString, QString> &mapPicPageUrlFileName);
+    bool ProcessUser(const QString &strUserId, const QString &strActivTime);
 };

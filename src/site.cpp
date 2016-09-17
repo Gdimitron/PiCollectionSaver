@@ -26,7 +26,8 @@ Site::Site(const QString &type, const QString &strDestDir, IMainLog *log,
                              QsFrWs(m_siteInfo->GetDBTableName()), m_log);
 }
 
-std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(const QString &strContent)
+std::shared_ptr<IHtmlPageElm> Site::HtmlPageElmCtr(
+        const QString &strContent) const
 {
     return m_plugin.GetHtmlPageElm(strContent);
 }
@@ -41,28 +42,35 @@ ISerialPicsDownloader *Site::SerialPicsDwnld()
     return &m_serPicDwnld;
 }
 
-bool Site::DownloadPicLoopWithWait(const qListPairOf2Str &picPageLinkFileName)
+bool Site::DownloadPicLoopWithWait(
+        const QMap<QString, QString> &mapPicPageUrlFileName)
 {
-    const int iConcurrentDownload = 10;
-    for (int i = 0; i < picPageLinkFileName.size(); i += iConcurrentDownload) {
-        auto aListPart = picPageLinkFileName.mid(i, iConcurrentDownload);
-        m_serPicDwnld.AddPicPageUrlLstToQueue(aListPart);
-
-        QEventLoop waitLoop;
-        QObject::connect(&m_serPicDwnld, SIGNAL(QueueEmpty()),
-                &waitLoop, SLOT(quit()));
-        waitLoop.exec();
+    const int iConcurrentDownload = 5;
+    QMap<QString, QString> subMap;
+    for (auto i = mapPicPageUrlFileName.constBegin();
+         i != mapPicPageUrlFileName.constEnd();) {
+        subMap[i.key()] = i.value();
+        ++i;
+        if (subMap.size() >= iConcurrentDownload ||
+                i == mapPicPageUrlFileName.constEnd()) {
+            m_serPicDwnld.AddPicPageUrlLstToQueue(subMap);
+            QEventLoop waitLoop;
+            QObject::connect(&m_serPicDwnld, SIGNAL(QueueEmpty()),
+                    &waitLoop, SLOT(quit()));
+            waitLoop.exec();
+            subMap.clear();
+        }
     }
     auto errPicLst = m_serPicDwnld.GetAndClearErrPicsList();
     return errPicLst.empty();
 }
 
-bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
+bool Site::ProcessUser(const QString &strUserId, const QString &strActivTime)
 {
-    m_log->LogOut("Process " + prUsrsActvTime.first + "... ", true);
+    m_log->LogOut("Process " + strUserId + "... ", true);
 
     auto strMainPageUrl = QsFrWs(UrlBldr()->GetMainUserPageUrlById(
-                prUsrsActvTime.first.toStdWString()));
+                                     strUserId.toStdWString()));
     auto byteRep = m_httpDwnld.DownloadSync(QUrl(strMainPageUrl));
     QString strRep = CommonUtils::Win1251ToQstring(byteRep);
     if (strRep.isEmpty()) {
@@ -79,10 +87,10 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
                              "" : QsFrWs(htmlElmt->GetUserName()));
 
     QString strLastActiveTime;
-    qListPairOf2Str qlstPrPicPageLinkFileName;
+    QMap<QString, QString> mapPicPageUrlFileName;
     try {
         strLastActiveTime = QsFrWs(htmlElmt->GetLastActivityTime());
-        if(strLastActiveTime == prUsrsActvTime.second) {
+        if(strLastActiveTime == strActivTime) {
             m_log->LogOut(QString("%1 last active time match - switch to next")
                           .arg(strUserName));
             return true;
@@ -91,12 +99,11 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
         m_log->LogOut(QString("%1 last active time does not match(\"%2\" vs"
                               " \"%3\") - parse common album")
                       .arg(strUserName)
-                      .arg(strLastActiveTime).arg(prUsrsActvTime.second));
+                      .arg(strLastActiveTime).arg(strActivTime));
 
         auto albManager(IAlbmMngrCtr(this, m_log, m_strDestDir,
-                                     prUsrsActvTime.first, htmlElmt,
-                                     m_httpDwnld));
-        qlstPrPicPageLinkFileName = albManager->GetMissingPicPageUrlLst();
+                                     strUserId, htmlElmt, &m_httpDwnld));
+        mapPicPageUrlFileName = albManager->GetMissingPicPageUrlLst();
     } catch (const parse_ex &ex) {
         if (CErrHlpr::IgnMsgBox("Parse error: " + QsFrWs(ex.strWhat()),
                                 QsFrWs(ex.strDetails()))) {
@@ -105,8 +112,8 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
         return false;
     }
 
-    if (!qlstPrPicPageLinkFileName.isEmpty()) {
-        if (!DownloadPicLoopWithWait(qlstPrPicPageLinkFileName)) {
+    if (!mapPicPageUrlFileName.isEmpty()) {
+        if (!DownloadPicLoopWithWait(mapPicPageUrlFileName)) {
             if (CErrHlpr::IgnMsgBox(
                         "Could not download pics",
                         "User: " + QsFrWs(htmlElmt->GetUserName()))) {
@@ -117,8 +124,6 @@ bool Site::ProcessUser(QPair<QString, QString> prUsrsActvTime)
     }
     m_log->LogOut("Update last active time ("
                   + QsFrWs(htmlElmt->GetUserName()) + ")");
-    prUsrsActvTime.second = strLastActiveTime;
-    DB()->UpdateLastActivityTime(prUsrsActvTime);
-
+    DB()->UpdateLastActivityTime(strUserId, strLastActiveTime);
     return true;
 }

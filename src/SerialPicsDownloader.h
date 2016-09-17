@@ -47,9 +47,10 @@ public:
     void SetSite(ISite *pSite);
     void SetOverwriteMode(bool bOverwrite);
     void SetDestinationFolder(const QString& strDstFolderPath);
-    void AddPicPageUrlLstToQueue(qListPairOf2Str &lstPicPageUrlFileName);
+    void AddPicPageUrlLstToQueue(
+            const QMap<QString, QString> &mapPicPageUrlFileName);
 
-    qListPairOf2Str GetAndClearErrPicsList();
+    QMap<QString, QString> GetAndClearErrPicsList();
 
 signals:
     void QueueEmpty();

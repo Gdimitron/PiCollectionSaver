@@ -3,18 +3,13 @@
 // found in the LICENSE file.
 
 #pragma once
-#include <QList>
+#include <QMap>
 #include <QString>
-#include <QStringList>
-#include <QPair>
 #include <QSharedPointer>
 
 #include "plugin_interface.h"
-#include "HttpDownloader.h"
 
-// typedefs:
-typedef QList< QPair<QString, QString> > qListPairOf2Str;
-
+class HttpDownloader;
 
 // interface IMainLog
 struct IMainLog
@@ -27,7 +22,7 @@ struct IMainLog
 // interface IWorkDir
 struct IWorkDir
 {
-    virtual const QString &GetWD()const = 0;
+    virtual const QString &GetWD() const = 0;
     virtual ~IWorkDir() {}
 };
 
@@ -56,18 +51,18 @@ struct ISqLiteManager
                             // e.g: "11/07/2012 10:46:01"
                             ) = 0;
 
-    virtual qListPairOf2Str GetFirstAllUsersIdActivityTime(
+    virtual QMap<QString, QString> GetFirstAllUsersIdActivityTime(
             int iCountMax,
             bool bFavoriteOnly = false,
             bool bEmptyActivityTimeOnly = false) = 0;
 
-    virtual qListPairOf2Str GetNextAllUsersIdActivityTime(
+    virtual QMap<QString, QString> GetNextAllUsersIdActivityTime(
             int iCountMax,
             bool bFavoriteOnly = false,
             bool bEmptyActivityTimeOnly = false) = 0;
 
-    virtual void UpdateLastActivityTime(
-            QPair<QString, QString> pairUserNameLastActivityTime) = 0;
+    virtual void UpdateLastActivityTime(const QString &strName,
+                                        const QString &strActivTime) = 0;
 
     //virtual void UpdateLastActivityTimeProcessed(qListPairOf2Str) = 0;
     virtual ~ISqLiteManager() {}
@@ -84,7 +79,7 @@ struct ISerialPicsDownloader
     virtual void SetOverwriteMode(bool) = 0;
     virtual void SetDestinationFolder(const QString& strFolderPath) = 0;
     virtual void AddPicPageUrlLstToQueue(/*direct pic url & file name to save*/
-            qListPairOf2Str &lstUrlPicLinksWithFileNames) = 0;
+            const QMap<QString, QString> &mapPicPageUrlFileName) = 0;
 };
 extern QSharedPointer<ISerialPicsDownloader> ISerPicsDownloaderCtr(
         QObject *parent, IMainLog *pLog, const ISiteInfo *pSiteInfo,
@@ -102,18 +97,20 @@ extern QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
 // interface ISite
 struct ISite
 {
-    virtual const ISiteInfo *SiteInfo() = 0;
-    virtual const IUrlBuilder *UrlBldr() = 0;
-    virtual const IFileSysBldr *FileNameBldr() = 0;
-    virtual std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(const QString &) = 0;
+    virtual const ISiteInfo *SiteInfo() const = 0;
+    virtual const IUrlBuilder *UrlBldr() const = 0;
+    virtual const IFileSysBldr *FileNameBldr() const = 0;
+    virtual std::shared_ptr<IHtmlPageElm> HtmlPageElmCtr(
+            const QString &) const = 0;
 
     virtual ISqLiteManager *DB() = 0;
     virtual ISerialPicsDownloader* SerialPicsDwnld() = 0;
 
     virtual bool DownloadPicLoopWithWait(
-            const qListPairOf2Str &picPageLinkFileName) = 0;
+            const QMap<QString, QString> &mapPicPageUrlFileName) = 0;
 
-    virtual bool ProcessUser(QPair<QString, QString> prUsrsActvTime) = 0;
+    virtual bool ProcessUser(const QString &strUserId,
+                             const QString &strActivTime) = 0;
     virtual ~ISite() {}
 };
 
@@ -121,7 +118,7 @@ struct ISite
 // interface IAlbmMngr
 struct IAlbmMngr
 {
-    virtual qListPairOf2Str GetMissingPicPageUrlLst() = 0;
+    virtual QMap<QString, QString> GetMissingPicPageUrlLst() = 0;
     virtual ~IAlbmMngr() {}
 
 };
@@ -129,7 +126,7 @@ extern QSharedPointer<IAlbmMngr> IAlbmMngrCtr(
         ISite *pSite, IMainLog *pLog, const QString &strFolder,
         const QString &strUserId,
         const std::shared_ptr<IHtmlPageElm> &htmlElmUserMain,
-        HttpDownloader &pHttpDown);
+        HttpDownloader *pHttpDown);
 
 // interface IHtmlMainPagesManager
 struct IHtmlMainPageManager
@@ -142,7 +139,7 @@ struct IHtmlMainPageManager
                                  ) = 0;
 
     virtual void EraseAll(void) = 0;
-    virtual qListPairOf2Str GetUserMainPageUrlsWithHtmlLastActivityTime(
+    virtual QMap<QString, QString> GetUserMainPageUrlsWithHtmlLastActivityTime(
             void) = 0;
     virtual QStringList GetFirstAlbumPageUrls(void) = 0;
     virtual QStringList GetAllPicsUrls(void) = 0;
@@ -152,8 +149,4 @@ private:
     virtual bool IsPageAndSqlActivityTimeSame(
             QString strMainUserPageHtmlContent,
             QString strLastActivityTimeFromSql) = 0;
-
-    // QList<QString> main user html list // filled by AddMainUserPageHtml() method(parameter)
-    // QList<QString> "all album" user html list //
-    //
 };

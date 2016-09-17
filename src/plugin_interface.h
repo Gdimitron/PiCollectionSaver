@@ -4,7 +4,6 @@
 
 #pragma once
 #include <string>
-#include <assert.h>
 #include <functional>
 #include <exception>
 #include <memory>
@@ -72,7 +71,6 @@ typedef std::shared_ptr<ISiteInfo> (ISiteInfoCtr_t)();
 typedef std::function<ISiteInfoCtr_t> f_ISiteInfoCtr;
 
 
-// TODO: Add const to methods(not only here)
 // interface IFileSysBldr some function to build file name
 struct IFileSysBldr
 {

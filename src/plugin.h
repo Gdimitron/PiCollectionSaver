@@ -4,27 +4,30 @@
 
 #pragma once
 
-#include <QLibrary>
-
 #include "topleveiInterfaces.h"
+
+// Forward declaration
+class QLibrary;
 
 class Plugin
 {
-    QLibrary m_PlugLib;
+    std::shared_ptr<QLibrary> m_pPlugLib;
     f_ISiteInfoCtr m_fSiteInfo;
     f_IFileSysBldrCtr m_fFsBldCtr;
     f_IUrlBuilderCtr m_fUrlBldr;
     f_IHtmlPageElmCtr m_fHtmlPageElm;
 
-public:
-    Plugin(const QString &type, IMainLog *log);
-    std::shared_ptr<ISiteInfo> GetSiteInfo();
-    std::shared_ptr<IUrlBuilder> GetUrlBuilder();
-    std::shared_ptr<IFileSysBldr> GetFileNameBuilder();
-    std::shared_ptr<IHtmlPageElm> GetHtmlPageElm(const QString &strContent);
-
     static QString plugDir;
     static QString plugNamePattern;
     static QString plugExt;
+
+public:
+    Plugin(const QString &type, IMainLog *log);
+    std::shared_ptr<ISiteInfo> GetSiteInfo() const;
+    std::shared_ptr<IUrlBuilder> GetUrlBuilder() const;
+    std::shared_ptr<IFileSysBldr> GetFileNameBuilder() const;
+    std::shared_ptr<IHtmlPageElm> GetHtmlPageElm(
+            const QString &strContent) const;
+
     static QStringList GetPluginTypes();
 };

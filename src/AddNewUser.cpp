@@ -67,10 +67,7 @@ void AddNewUser::Impl()
         if (m_pSite->DB()->IsUserWithIdExist(strId)) {
             m_pLog->LogOut("(AddNewUser::Impl) " + strUserName
                            + " with ID " + strId + " already exist");
-            QPair<QString, QString> prUsrActiveTime;
-            prUsrActiveTime.first = strId;
-            prUsrActiveTime.second = "";
-            m_pSite->DB()->UpdateLastActivityTime(prUsrActiveTime);
+            m_pSite->DB()->UpdateLastActivityTime(strId, "");
             continue;
         }
 

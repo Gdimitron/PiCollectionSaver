@@ -4,11 +4,12 @@
 
 #pragma once
 #include "topleveiInterfaces.h"
-#include <QtSql>
+
+class QSqlDatabase;
 
 class CSqLiteManager : public ISqLiteManager
 {
-    QSqlDatabase m_sqLiteDB;
+    std::shared_ptr<QSqlDatabase> m_pSqLiteDB;
     QString m_strTableName;
     IMainLog *m_pLog;
 
@@ -19,9 +20,9 @@ public:
                    IMainLog *pLog);
     virtual ~CSqLiteManager(void);
 
-    QSqlDatabase &getDb();
+    QSqlDatabase *getDb();
 
-    bool IsUserWithIdExist(const QString& strUserId);   // format: "117235"
+    bool IsUserWithIdExist(const QString& strUserId);
 
     int GetUserCnt();
 
@@ -29,20 +30,23 @@ public:
                     const QString & strUserId,       // format: "117235"
                     const QString & strLstActvTime); // - "11/07/2012 10:46:01"
 
-    qListPairOf2Str GetFirstAllUsersIdActivityTime(int iCountMax,
-            bool bFavoriteOnly = false, bool bEmptyActivityTimeOnly = false);
+    QMap<QString, QString> GetFirstAllUsersIdActivityTime(
+            int iCountMax, bool bFavoriteOnly = false,
+            bool bEmptyActivityTimeOnly = false);
 
-    qListPairOf2Str GetNextAllUsersIdActivityTime(int iCountMax,
-            bool bFavoriteOnly = false, bool bEmptyActivityTimeOnly = false);
+    QMap<QString, QString> GetNextAllUsersIdActivityTime(
+            int iCountMax, bool bFavoriteOnly = false,
+            bool bEmptyActivityTimeOnly = false);
 
-    void UpdateLastActivityTime(
-            QPair<QString, QString> pairUserNameLastActivityTime);
+    void UpdateLastActivityTime(const QString &strName,
+                                const QString &strActivTime);
     //void UpdateLastActivityTimeProcessed(qListPairOf2Str lstUserIdTime);
 
 private:
     void LogOut(const QString &strMessage);
 
-    qListPairOf2Str GetAllUsersIdActivityTimeImpl(int iCountMax,
-            bool bFavoriteOnly = false, bool bEmptyActivityTimeOnly = false);
+    QMap<QString, QString> GetAllUsersIdActivityTimeImpl(
+            int iCountMax, bool bFavoriteOnly = false,
+            bool bEmptyActivityTimeOnly = false);
     int GetMaxTableId();
 };

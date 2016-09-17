@@ -4,7 +4,6 @@
 
 #pragma once
 #include "topleveiInterfaces.h"
-#include "HttpDownloader.h"
 
 class AlbumManager: public IAlbmMngr
 {
@@ -13,15 +12,15 @@ class AlbumManager: public IAlbmMngr
     QString m_strFolder;
     QString m_strUserId;
     std::shared_ptr<IHtmlPageElm> m_htmlElmUsrMain;
-    HttpDownloader &m_pHttpDown;
+    HttpDownloader *m_pHttpDown;
 
 public:
     AlbumManager(ISite *pSite, IMainLog *pLog,
                  const QString &strFolder, const QString &strUserId,
                  const std::shared_ptr<IHtmlPageElm> &htmlElementUserMain,
-                 HttpDownloader &pHttpDown);
+                 HttpDownloader *pHttpDown);
 
-    qListPairOf2Str GetMissingPicPageUrlLst();
+    QMap<QString, QString> GetMissingPicPageUrlLst();
 
 private: // methods
     void LogOut(const QString &strMessage);

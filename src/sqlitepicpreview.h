@@ -4,11 +4,12 @@
 
 #pragma once
 #include "topleveiInterfaces.h"
-#include <QtSql>
+
+class QSqlDatabase;
 
 class SqLitePicPreview : public ISqLitePicPreview
 {
-    QSqlDatabase m_sqLiteDB;
+    std::shared_ptr<QSqlDatabase> m_pSqLiteDB;
     IMainLog *m_pLog;
     IWorkDir *m_pWorkDir;
     QString m_strWDPath;

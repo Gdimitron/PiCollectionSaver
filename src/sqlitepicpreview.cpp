@@ -4,6 +4,7 @@
 
 #include "sqlitepicpreview.h"
 
+#include <QtSql>
 #include <QImageReader>
 
 static const QString c_strDbFileName = "pi_collection_preview_cache.db";
@@ -60,21 +61,24 @@ SqLitePicPreview::SqLitePicPreview(IMainLog *pLog, IWorkDir *pWorkDir)
 
 SqLitePicPreview::~SqLitePicPreview()
 {
-    m_sqLiteDB.close();
+    m_pSqLiteDB->close();
 }
 
 void SqLitePicPreview::InitDB()
 {
-    m_sqLiteDB.close();
+    if (m_pSqLiteDB) {
+        m_pSqLiteDB->close();
+    }
     auto dbPath = m_strWDPath + "/" + c_strDbFileName;
-    m_sqLiteDB = QSqlDatabase::addDatabase("QSQLITE", "preview_cache_connect");
-    m_sqLiteDB.setDatabaseName(dbPath);
-    if (!m_sqLiteDB.open()) {
+    m_pSqLiteDB = std::make_shared<QSqlDatabase>(
+                QSqlDatabase::addDatabase("QSQLITE", "preview_cache_connect"));
+    m_pSqLiteDB->setDatabaseName(dbPath);
+    if (!m_pSqLiteDB->open()) {
         LogOut("Failed to open SqLite db(\"" + dbPath + "\"): "
-               + m_sqLiteDB.lastError().text());
+               + m_pSqLiteDB->lastError().text());
         return;
     }
-    QStringList lstTableList = m_sqLiteDB.tables();
+    QStringList lstTableList = m_pSqLiteDB->tables();
     if (lstTableList.indexOf(c_strDbTableName) == -1) {
         QString str =
                 "CREATE TABLE " + c_strDbTableName + " ( "
@@ -82,7 +86,7 @@ void SqLitePicPreview::InitDB()
                 + c_strFileName + " TEXT, "
                 + c_strFilePreview + " BLOB );";
 
-        QSqlQuery sqlQuery(m_sqLiteDB);
+        QSqlQuery sqlQuery(*m_pSqLiteDB);
         if(!sqlQuery.exec(str)) {
             QSqlError err = sqlQuery.lastError();
             LogOut("Failed to execute sql query: " + err.text());
@@ -113,7 +117,7 @@ bool SqLitePicPreview::IsFileNameExist(const QString &strFile)
             "SELECT * FROM " + c_strDbTableName
             + " WHERE " + c_strFileName + " IS " + strFile;
 
-    QSqlQuery sqlQuery(m_sqLiteDB);
+    QSqlQuery sqlQuery(*m_pSqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
         LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
         return false;
@@ -130,7 +134,7 @@ bool SqLitePicPreview::IsFileNameExist(const QString &strFile)
 void SqLitePicPreview::AddPreviewToDB(const QString & strFile,
                                       const QByteArray &bytePicPreview)
 {
-    QSqlQuery sqlQuery(m_sqLiteDB);
+    QSqlQuery sqlQuery(*m_pSqLiteDB);
     QString strInsertCommand = QString(
                 "INSERT INTO " + c_strDbTableName
                 + "(" + c_strFileName + ", " + c_strFilePreview
@@ -149,9 +153,9 @@ QByteArray SqLitePicPreview::GetPreviewFromDB(const QString &strFile)
     QByteArray retVal;
     QString strSelectCommand =
             "SELECT " + c_strFilePreview + " FROM " + c_strDbTableName
-            + " WHERE " + c_strFileName + " IS '" + strFile +"'";
+            + " WHERE " + c_strFileName + " IS '" + strFile + "'";
 
-    QSqlQuery sqlQuery(m_sqLiteDB);
+    QSqlQuery sqlQuery(*m_pSqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
         LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
         return retVal;

@@ -172,17 +172,17 @@ void PiCollectionSaver::ProcessAllUsers(bool bFavorite, bool bEmptyActivityTime)
     int iTotalUsers(site->DB()->GetUserCnt()), iProcessedUsersCnt(0);
     const int iSqlGetMaxCnt(20);
 
-    auto lstUsrsActvTime = site->DB()->GetFirstAllUsersIdActivityTime(
+    auto mapUsrs = site->DB()->GetFirstAllUsersIdActivityTime(
                 iSqlGetMaxCnt, bFavorite, bEmptyActivityTime);
-    while(!lstUsrsActvTime.isEmpty()) {
-        foreach(auto prUsrsActvTime, lstUsrsActvTime) {
-            m_previewDownload->NewUser(prUsrsActvTime.first);
-            if (!site->ProcessUser(prUsrsActvTime) || IsStopProcessing()) {
+    while(!mapUsrs.isEmpty()) {
+        for (auto i = mapUsrs.constBegin(); i != mapUsrs.constEnd(); ++i) {
+            m_previewDownload->NewUser(i.key());
+            if (!site->ProcessUser(i.key(), i.value()) || IsStopProcessing()) {
                 goto exit;
             }
             ui.progressBar->setValue(++iProcessedUsersCnt * 100 / iTotalUsers);
         }
-        lstUsrsActvTime = site->DB()->GetNextAllUsersIdActivityTime(
+        mapUsrs = site->DB()->GetNextAllUsersIdActivityTime(
                     iSqlGetMaxCnt, bFavorite, bEmptyActivityTime);
     }
 exit:
@@ -214,11 +214,11 @@ void PiCollectionSaver::on_actionDownload_photo_by_ID_triggered()
         return;
     }
     DownloadPicById *downPicByIdDlg = new DownloadPicById(this, &*site, this);
-    auto qlstPrPicPageLinkFileName = downPicByIdDlg->Impl();
+    auto mapPicPageUrlFileName = downPicByIdDlg->Impl();
 
-    if (!qlstPrPicPageLinkFileName.isEmpty()) {
+    if (!mapPicPageUrlFileName.isEmpty()) {
         site->SerialPicsDwnld()->SetOverwriteMode(true);
-        site->DownloadPicLoopWithWait(qlstPrPicPageLinkFileName);
+        site->DownloadPicLoopWithWait(mapPicPageUrlFileName);
     }
 }
 

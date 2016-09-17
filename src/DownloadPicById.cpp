@@ -23,11 +23,11 @@ DownloadPicById::~DownloadPicById()
     delete ui;
 }
 
-qListPairOf2Str DownloadPicById::Impl()
+QMap<QString, QString> DownloadPicById::Impl()
 {
-    qListPairOf2Str lstUrlFileName;
+    QMap<QString, QString> mapUrlFileName;
     if (exec() != QDialog::Accepted) {
-        return lstUrlFileName;
+        return mapUrlFileName;
     }
     QTextStream strStreamPicsIds(
                 ui->plainTextEditPicPageUrls->toPlainText().toUtf8());
@@ -89,10 +89,10 @@ qListPairOf2Str DownloadPicById::Impl()
                                   strUserId.toStdWString(),
                                   m_pSite->UrlBldr()->GetPicIdFromUrl(
                                       strPicPageUrl.toStdWString())));
-        lstUrlFileName.append(qMakePair(strPicPageUrl, strFile));
+        mapUrlFileName[strPicPageUrl] = strFile;
 
         m_pLog->LogOut("(DownloadPicById::Impl) Add pic to list: " + strUserId +
                        " (" + strFile + ")");
     }
-    return lstUrlFileName;
+    return mapUrlFileName;
 }
