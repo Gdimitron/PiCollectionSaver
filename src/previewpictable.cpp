@@ -39,7 +39,7 @@ void PreviewPicTable::AddPreviewPic(const QString &imgPath,
         break;
     case modeDocResourcesImg:
         QImage img;
-        auto resUrl = QString("thumbs://%1").arg(QFileInfo(imgPath).fileName());
+        auto resUrl = QString("thumbs_%1").arg(QFileInfo(imgPath).fileName());
         if (img.loadFromData(imgPreview)) {
             auto doc = m_pTextBrows->document();
             doc->addResource(QTextDocument::ImageResource, QUrl(resUrl),
