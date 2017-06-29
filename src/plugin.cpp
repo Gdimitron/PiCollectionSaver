@@ -4,7 +4,7 @@
 #include <QDir>
 #include <QLibrary>
 
-QString Plugin::plugDir = "..";
+QString Plugin::plugDir = ".";
 QString Plugin::plugNamePattern = "libPiCollection%1";
 #ifdef _WIN32
 QString Plugin::plugExt = "dll";

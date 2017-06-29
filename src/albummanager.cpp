@@ -110,7 +110,7 @@ QMap<QString, QString> AlbumManager::GetMissingPicPageUrlLst()
         }
     }
 
-    LogOut(QString("Finished(ID %1). %2 from %3 pictures are missing local")
+    LogOut(QString("Finished(ID %1). %2 from %3 pictures are missed local")
            .arg(m_strUserId).arg(res.size())
            .arg(m_htmlElmUsrMain->GetTotalPhotoCount()));
 
