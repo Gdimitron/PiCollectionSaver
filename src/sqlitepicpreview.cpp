@@ -42,8 +42,8 @@ void SqLitePicPreview::AddNotExistRange(const QStringList &lstFileNames,
     const int itemsPerReqMax(1000);
     int itemsPerReq(10);
     QStringList lstFNameToQuery, lstFNamePreviewAbsent;
-    for (int i = 1; itFrom >= m_itFNameItInQueue; i++) {
-        if (m_itFNameItInQueue != nullptr && itFrom < m_itFNameItInQueue) {
+    for (int i = 1; itFrom >= m_itFNameInGenQueue; i++) {
+        if (m_itFNameInGenQueue != nullptr && itFrom < m_itFNameInGenQueue) {
             break;			// element already in queue
         }
         lstFNameToQuery.push_back(*itFrom++);
@@ -58,7 +58,7 @@ void SqLitePicPreview::AddNotExistRange(const QStringList &lstFileNames,
                 break;
             }
             EnqueueTasks(lstFNamePreviewAbsent);
-            m_itFNameItInQueue = itFrom;
+            m_itFNameInGenQueue = itFrom;
             if (itFrom == lstFileNames.constEnd()) {
                 break;
             }
@@ -67,7 +67,7 @@ void SqLitePicPreview::AddNotExistRange(const QStringList &lstFileNames,
     }
     while(ProcessReadyTasks() == 0) {
         // we need to wait at most 1 processed, because next call
-        // to GetPreview expect first queued element
+        // to GetPreview expect first queued element will be ready
         using namespace std::chrono_literals;
         std::this_thread::sleep_for(50ms);
     }
@@ -80,14 +80,17 @@ SqLitePicPreview::SqLitePicPreview(IMainLog *pLog, IWorkDir *pWorkDir)
 
 SqLitePicPreview::~SqLitePicPreview()
 {
-    m_pSqLiteDB->close();
+    if (m_pSqLiteDB) {
+        m_pSqLiteDB->close();
+    }
 }
 
-void SqLitePicPreview::InitDB()
+void SqLitePicPreview::InitPreviewDB()
 {
     if (m_pSqLiteDB) {
         m_pSqLiteDB->close();
     }
+    m_itFNameInGenQueue = nullptr;
     auto dbPath = m_strWDPath + "/" + c_strDbFileName;
     m_pSqLiteDB = std::make_shared<QSqlDatabase>(
                 QSqlDatabase::addDatabase("QSQLITE", "preview_cache_connect"));
@@ -119,8 +122,7 @@ void SqLitePicPreview::ReInitDBifPathChanged()
     auto workDir = m_pWorkDir->GetWD();
     if (m_strWDPath != workDir){
         m_strWDPath = workDir;
-        InitDB();
-        m_itFNameItInQueue = nullptr;
+        InitPreviewDB();
     }
 }
 
@@ -131,6 +133,11 @@ void SqLitePicPreview::LogOut(const QString &strMessage)
     }
 }
 
+void SqLitePicPreview::HandleFailedSqlQuery(const QString &sqlErr)
+{
+    LogOut("Failed to execute sql query: " + sqlErr);
+}
+
 bool SqLitePicPreview::IsFileNameExist(const QString &strFile)
 {
     QString strSelectCommand =
@@ -139,7 +146,7 @@ bool SqLitePicPreview::IsFileNameExist(const QString &strFile)
 
     QSqlQuery sqlQuery(*m_pSqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
-        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
+        HandleFailedSqlQuery(sqlQuery.lastError().text());
         return false;
     }
 
@@ -163,7 +170,7 @@ void SqLitePicPreview::AddPreviewToDB(const QString & strFile,
     sqlQuery.prepare(strInsertCommand);
     sqlQuery.bindValue( ":imageData", bytePicPreview);
     if(!sqlQuery.exec()) {
-        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
+        HandleFailedSqlQuery(sqlQuery.lastError().text());
         return;
     }
 }
@@ -177,7 +184,7 @@ QByteArray SqLitePicPreview::GetPreviewFromDB(const QString &strFile)
 
     QSqlQuery sqlQuery(*m_pSqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
-        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
+        HandleFailedSqlQuery(sqlQuery.lastError().text());
         return retVal;
     }
     if (sqlQuery.next()) {
@@ -204,7 +211,7 @@ QStringList SqLitePicPreview::GetAbsentFrom(const QStringList &lstFileNames)
 
     QSqlQuery sqlQuery(*m_pSqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
-        LogOut("Failed to execute sql query: " + sqlQuery.lastError().text());
+        HandleFailedSqlQuery(sqlQuery.lastError().text());
         return retVal;
     }
     while (sqlQuery.next()) {

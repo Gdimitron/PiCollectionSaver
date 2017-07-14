@@ -22,7 +22,7 @@ class SqLitePicPreview : public ISqLitePicPreview
 
     std::mutex m_mutexQueueGuard;
     std::deque<QString> m_deqFileNamesIn;
-    QStringList::const_iterator m_itFNameItInQueue { nullptr };
+    QStringList::const_iterator m_itFNameInGenQueue { nullptr };
     using previewItem = std::tuple<QString, QByteArray,
                                     std::shared_ptr<std::atomic_bool>, QString>;
     std::deque<previewItem> m_deqPreviewsOut;
@@ -35,9 +35,10 @@ public:
     ~SqLitePicPreview();
 
 private:
-    void InitDB();
+    void InitPreviewDB();
     void ReInitDBifPathChanged();
     void LogOut(const QString &strMessage);
+    void HandleFailedSqlQuery(const QString &sqlErr);
     bool IsFileNameExist(const QString& strFile);
     void AddPreviewToDB(const QString & strFile,
                         const QByteArray &bytePicPreview);
@@ -48,7 +49,6 @@ private:
     int ProcessReadyTasks(int iMaxToProcess = 10);
     void StartAsyncPool();
     void AsyncResizeTask() noexcept;
-
 };
 
 // support function
