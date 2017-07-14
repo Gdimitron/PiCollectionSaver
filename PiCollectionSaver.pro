@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = PiCollectionSaver
 TEMPLATE = app
 
-QMAKE_CXXFLAGS += -std=c++11
+CONFIG += c++14
 
 HEADERS += src/CommonConstants.h\
     src/SqLiteManager.h\

@@ -248,17 +248,25 @@ void PiCollectionSaver::slotPicViewerReturnPressed()
     m_previewBrowse->NewUser(ui.lineEditPicViewer->text());
     QByteArray preview;
     int processed(0);
-    for(auto strFileName: m_previewBrowseItems) {
-        m_previewSqLiteCache->GetPreview(strFileName, preview);
-        m_previewBrowse->AddPreviewPic(destDir + strFileName, preview);
+    for(auto itFileName = m_previewBrowseItems.constBegin();
+        itFileName != m_previewBrowseItems.constEnd(); itFileName++) {
         qApp->processEvents();
         if (++processed % 300 == 0) {
-            double speedImgSec = timer.elapsed() / 1000;
-            speedImgSec = processed / speedImgSec;
-            ui.lineEditPicViewer->setText(QString("%1/%2 (%3 img/sec)")
-                                          .arg(processed)
-                                          .arg(m_previewBrowseItems.size())
-                                          .arg(speedImgSec));
+            double speedImgSec = processed/double(timer.elapsed() / 1000);
+            auto strSpeed = QString("%1/%2 (%3 img/sec)").arg(processed)
+                    .arg(m_previewBrowseItems.size()).arg(speedImgSec);
+            qDebug() << strSpeed;
+            ui.lineEditPicViewer->setText(strSpeed);
+        }
+        if (m_previewSqLiteCache->GetPreview(*itFileName, preview)) {
+            m_previewBrowse->AddPreviewPic(destDir + *itFileName, preview);
+        } else {
+            // there is no such pic in thumb cache, add request for absent range
+            m_previewSqLiteCache->AddNotExistRange(m_previewBrowseItems,
+                                                   itFileName);
+            auto bRes = m_previewSqLiteCache->GetPreview(*itFileName, preview);
+            Q_ASSERT(bRes);
+            m_previewBrowse->AddPreviewPic(destDir + *itFileName, preview);
         }
     }
     qDebug() << timer.elapsed();
