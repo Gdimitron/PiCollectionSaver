@@ -22,7 +22,7 @@ PiCollectionSaver::PiCollectionSaver(QWidget *parent)
     ui.setupUi(this);
     ui.progressBar->setVisible(false);
 
-    m_previewSqLiteCache = ISqLitePicPreviewCtr(this, this);
+    m_previewDB = ISqLitePicPreviewCtr(this, this);
     m_previewDownload.reset(new PreviewPicTable(ui.textBrowserDownloaded));
     m_previewBrowse.reset(new PreviewPicTable(ui.textBrowserGal));
 
@@ -111,7 +111,7 @@ void PiCollectionSaver::FileSaved(const QString &strPath)
 {
     QByteArray preview;
     QFileInfo fileInfo(strPath);
-    m_previewSqLiteCache->GetPreview(fileInfo.fileName(), preview);
+    m_previewDB->GetPreview(fileInfo.fileName(), preview);
     m_previewDownload->AddPreviewPic(strPath, preview);
 }
 
@@ -250,24 +250,21 @@ void PiCollectionSaver::slotPicViewerReturnPressed()
     int processed(0);
     for(auto itFileName = m_previewBrowseItems.constBegin();
         itFileName != m_previewBrowseItems.constEnd(); itFileName++) {
-        qApp->processEvents();
-        if (++processed % 300 == 0) {
-            double speedImgSec = processed/double(timer.elapsed() / 1000);
+        if (++processed % 50 == 0) {
+            double speedImgSec = processed/(double(timer.elapsed()) / 1000);
             auto strSpeed = QString("%1/%2 (%3 img/sec)").arg(processed)
                     .arg(m_previewBrowseItems.size()).arg(speedImgSec);
             qDebug() << strSpeed;
             ui.lineEditPicViewer->setText(strSpeed);
         }
-        if (m_previewSqLiteCache->GetPreview(*itFileName, preview)) {
-            m_previewBrowse->AddPreviewPic(destDir + *itFileName, preview);
-        } else {
-            // there is no such pic in thumb cache, add request for absent range
-            m_previewSqLiteCache->AddNotExistRange(m_previewBrowseItems,
-                                                   itFileName);
-            auto bRes = m_previewSqLiteCache->GetPreview(*itFileName, preview);
+        if (!m_previewDB->GetPreview(*itFileName, preview)) {
+            // there is no such pic in preview DB, add request for absent range
+            m_previewDB->AddNotExistRange(m_previewBrowseItems, itFileName);
+            auto bRes = m_previewDB->GetPreview(*itFileName, preview, true);
             Q_ASSERT(bRes);
-            m_previewBrowse->AddPreviewPic(destDir + *itFileName, preview);
         }
+        qApp->processEvents();
+        m_previewBrowse->AddPreviewPic(destDir + *itFileName, preview);
     }
     qDebug() << timer.elapsed();
     m_previewBrowse->CachedModeEnable(false);

@@ -26,7 +26,7 @@ public:
 private:
     Ui::PiCollectionSaverClass ui;
 
-    QSharedPointer<ISqLitePicPreview> m_previewSqLiteCache;
+    QSharedPointer<ISqLitePicPreview> m_previewDB;
     QSharedPointer<PreviewPicTable> m_previewDownload;
 
     QStringList m_previewBrowseItems;

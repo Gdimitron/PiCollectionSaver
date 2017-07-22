@@ -6,18 +6,21 @@
 
 #include <QtSql>
 #include <QImageReader>
+#include <QLoggingCategory>
 #include <chrono>
+
+Q_LOGGING_CATEGORY(DBPreview, "sqlite.pic_preview", QtWarningMsg) // QtDebugMsg
 
 static const QString c_strDbFileName = "pi_collection_preview_cache.db";
 static const QString c_strDbTableName = "cache_table";
 
-static const QString c_strIdClmn =	"id";
+static const QString c_strIdClmn = "id";
 static const QString c_strFileName = "FileName";
 static const QString c_strFilePreview = "FilePreview";
 static const QSize c_picPrevSize(1000, 180);
 
-QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
-        IMainLog *pLog, IWorkDir *pWorkDir)
+QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(IMainLog *pLog,
+                                                       IWorkDir *pWorkDir)
 {
     QSharedPointer<ISqLitePicPreview> retVal(
                 new SqLitePicPreview(pLog, pWorkDir));
@@ -25,10 +28,17 @@ QSharedPointer<ISqLitePicPreview> ISqLitePicPreviewCtr(
 }
 
 bool SqLitePicPreview::GetPreview(const QString &strFile,
-                                  QByteArray &retPreview)
+                                  QByteArray &retPreview,
+                                  bool bWaitReady)
 {
     ReInitDBifPathChanged();
-    ProcessReadyTasks();
+    if (bWaitReady) {
+        while(!IsPreviewReady(strFile)) {
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(50ms);
+        }
+    }
+    ProcessReady();
     retPreview = GetPreviewFromDB(strFile);
     if (retPreview.isEmpty()) {
         return false;
@@ -40,7 +50,7 @@ void SqLitePicPreview::AddNotExistRange(const QStringList &lstFileNames,
                                         QStringList::const_iterator itFrom)
 {
     const int itemsPerReqMax(1000);
-    int itemsPerReq(10);
+    auto itemsPerReq = static_cast<int>(m_tskCnt * m_tskBufItemCnt);
     QStringList lstFNameToQuery, lstFNamePreviewAbsent;
     for (int i = 1; itFrom >= m_itFNameInGenQueue; i++) {
         if (m_itFNameInGenQueue != nullptr && itFrom < m_itFNameInGenQueue) {
@@ -50,7 +60,7 @@ void SqLitePicPreview::AddNotExistRange(const QStringList &lstFileNames,
         if (i % itemsPerReq == 0 || itFrom == lstFileNames.constEnd()) {
             lstFNamePreviewAbsent = GetAbsentFrom(lstFNameToQuery);
             if (lstFNamePreviewAbsent.size() * 2 > itemsPerReq) {
-                // adjust items count per request
+                // adjust items count per DB request (adjust window)
                 itemsPerReq = std::min(itemsPerReq * 2, itemsPerReqMax);
             }
             if (lstFNamePreviewAbsent.empty()) {
@@ -65,15 +75,10 @@ void SqLitePicPreview::AddNotExistRange(const QStringList &lstFileNames,
             lstFNameToQuery.clear();
         }
     }
-    while(ProcessReadyTasks() == 0) {
-        // we need to wait at most 1 processed, because next call
-        // to GetPreview expect first queued element will be ready
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(50ms);
-    }
 }
 
-SqLitePicPreview::SqLitePicPreview(IMainLog *pLog, IWorkDir *pWorkDir)
+SqLitePicPreview::SqLitePicPreview(IMainLog *pLog,
+                                   IWorkDir *pWorkDir)
     : m_pLog(pLog), m_pWorkDir(pWorkDir)
 {
 }
@@ -91,6 +96,8 @@ void SqLitePicPreview::InitPreviewDB()
         m_pSqLiteDB->close();
     }
     m_itFNameInGenQueue = nullptr;
+    ClearDBPrevCache();
+
     auto dbPath = m_strWDPath + "/" + c_strDbFileName;
     m_pSqLiteDB = std::make_shared<QSqlDatabase>(
                 QSqlDatabase::addDatabase("QSQLITE", "preview_cache_connect"));
@@ -120,7 +127,7 @@ void SqLitePicPreview::InitPreviewDB()
 void SqLitePicPreview::ReInitDBifPathChanged()
 {
     auto workDir = m_pWorkDir->GetWD();
-    if (m_strWDPath != workDir){
+    if (m_strWDPath != workDir) {
         m_strWDPath = workDir;
         InitPreviewDB();
     }
@@ -158,17 +165,25 @@ bool SqLitePicPreview::IsFileNameExist(const QString &strFile)
     return iResultCount > 0;
 }
 
-void SqLitePicPreview::AddPreviewToDB(const QString & strFile,
-                                      const QByteArray &bytePicPreview)
+void SqLitePicPreview::DBAddPreviews(
+        const std::vector<std::pair<QString, QByteArray>> vals)
 {
     QSqlQuery sqlQuery(*m_pSqLiteDB);
-    QString strInsertCommand = QString(
-                "INSERT INTO " + c_strDbTableName
-                + "(" + c_strFileName + ", " + c_strFilePreview
-                + ") VALUES('%1', :imageData)").arg(strFile);
+    QString strInsertCommand = "INSERT INTO " + c_strDbTableName
+                + "(" + c_strFileName + ", " + c_strFilePreview + ") VALUES ";
 
+    int i = 0;
+    for (const auto& item: vals) {
+        strInsertCommand += QString("('%1', :img%2),").arg(item.first).arg(i++);
+    }
+    *(strInsertCommand.end() - 1) = ' ';	// replace last ','
     sqlQuery.prepare(strInsertCommand);
-    sqlQuery.bindValue( ":imageData", bytePicPreview);
+
+    i = 0;
+    for (const auto& item: vals) {
+        sqlQuery.bindValue(QString(":img%1").arg(i++), item.second);
+        InsertInDBPrevCache(item.first, item.second);
+    }
     if(!sqlQuery.exec()) {
         HandleFailedSqlQuery(sqlQuery.lastError().text());
         return;
@@ -177,7 +192,10 @@ void SqLitePicPreview::AddPreviewToDB(const QString & strFile,
 
 QByteArray SqLitePicPreview::GetPreviewFromDB(const QString &strFile)
 {
-    QByteArray retVal;
+    QByteArray retVal = GetFromDBPrevCache(strFile);
+    if (!retVal.isEmpty()) {
+        return retVal;
+    }
     QString strSelectCommand =
             "SELECT " + c_strFilePreview + " FROM " + c_strDbTableName
             + " WHERE " + c_strFileName + " IS '" + strFile + "'";
@@ -207,7 +225,7 @@ QStringList SqLitePicPreview::GetAbsentFrom(const QStringList &lstFileNames)
     for (const auto& item: lstFileNames) {
         strSelectCommand += "('" + item + "'),";
     }
-    *(strSelectCommand.end() - 1) = ')';	// replace last ',' on ')'
+    *(strSelectCommand.end() - 1) = ')';	// replace last ','
 
     QSqlQuery sqlQuery(*m_pSqLiteDB);
     if(!sqlQuery.exec(strSelectCommand)) {
@@ -220,101 +238,168 @@ QStringList SqLitePicPreview::GetAbsentFrom(const QStringList &lstFileNames)
     return retVal;
 }
 
+void SqLitePicPreview::InsertInDBPrevCache(const QString &fName,
+                                           const QByteArray &pic)
+{
+    m_DBPrevCache.insert(std::make_pair(fName, pic));
+    if (DBPreview().isDebugEnabled()){
+        static int dbg_cnt = 0;		// dump unordered_map stats
+        if (dbg_cnt++ % 150 == 0) {
+            qCDebug(DBPreview) << "m_DBPrevCache sz: " << m_DBPrevCache.size()
+                 << " load_factor: " << m_DBPrevCache.load_factor()
+                 << " bucket_count: " << m_DBPrevCache.bucket_count();
+
+            std::unordered_map<unsigned long, int> bucket_distribution;
+            for (unsigned int i = 0; i < m_DBPrevCache.bucket_count(); i++) {
+                bucket_distribution[m_DBPrevCache.bucket_size(i)]++;
+            }
+            for (unsigned long i = 0; i < bucket_distribution.size(); i++) {
+                qCDebug(DBPreview) << i << "element(s) in bucket: "
+                                   << bucket_distribution[i];
+            }
+        }
+    }
+}
+
+bool SqLitePicPreview::IsPreviewReady(const QString& strFileName) {
+    std::lock_guard<std::mutex> guard(m_mutexQueueGuard);
+    auto isInInputQueue = std::find(m_deqFNamesIn.begin(), m_deqFNamesIn.end(),
+                                    strFileName) != m_deqFNamesIn.end();
+    if (isInInputQueue) {
+        return false;
+    }
+    auto lambdaExistAndReady = [&strFileName](const previewItem& item) {
+        if (std::get<0>(item) == strFileName && *std::get<2>(item)) {
+            return true;
+        }
+        return false;
+    };
+    auto ready = std::find_if(m_deqPreviewsOut.begin(), m_deqPreviewsOut.end(),
+                              lambdaExistAndReady) != m_deqPreviewsOut.end();
+    return ready;
+}
+
 void SqLitePicPreview::EnqueueTasks(const QStringList &lstFileNames)
 {
     {
         std::lock_guard<std::mutex> guard(m_mutexQueueGuard);
         for (const auto &item: lstFileNames) {
-            m_deqFileNamesIn.push_back(item);
+            m_deqFNamesIn.push_back(item);
+            m_atmItemInQueueCnt++;
         }
     }
+    qCDebug(DBPreview) << "Enqueuened: " << lstFileNames.size();
     StartAsyncPool();
 }
 
-int SqLitePicPreview::ProcessReadyTasks(int iMaxToProcess)
+int SqLitePicPreview::ProcessReady(int iMaxToProcess)
 {
-    int retVal(0);
-    while (!m_deqPreviewsOut.empty()) {
-        using namespace std;
-        const auto item = m_deqPreviewsOut.front();
-        if (*get<2>(item)) {
-            if (!get<3>(item).isEmpty()) {
-                LogOut(get<3>(item));	// resize task ends with error
-                retVal++;
-            } else if (!get<1>(item).isEmpty()) {
-                AddPreviewToDB(get<0>(item), get<1>(item));
-                retVal++;
+    using namespace std;
+    int processed(0);
+    vector<pair<QString, QByteArray>> vAddToDB;
+    {
+        lock_guard<mutex> guard(m_mutexQueueGuard);
+        while (!m_deqPreviewsOut.empty()) {
+            const auto item = m_deqPreviewsOut.front();
+            if (*get<2>(item)) { // resize task ends...
+                if (!get<3>(item).isEmpty()) { // if ends with error
+                    LogOut(get<3>(item));
+                } else if (!get<1>(item).isEmpty()) { // success
+                    vAddToDB.push_back(make_pair(get<0>(item), get<1>(item)));
+                } else {
+                    Q_ASSERT(false);
+                }
+                m_deqPreviewsOut.pop_front();
+                processed++;
+            } else {
+                break;     // no more in 'ready' state
             }
-        } else {
-            break;     // no more in ready state
-        }
-        {
-            lock_guard<mutex> guard(m_mutexQueueGuard);
-            m_deqPreviewsOut.pop_front();
-        }
-        if (retVal >= iMaxToProcess) {
-            break;
+            if (processed >= iMaxToProcess) {
+                break;
+            }
         }
     }
-    return retVal;
+    if (processed) {
+        QElapsedTimer tmr; if (DBPreview().isDebugEnabled()) { tmr.start(); }
+
+        DBAddPreviews(vAddToDB);
+
+        qCDebug(DBPreview) << "Items add to DB: " << vAddToDB.size()
+                           << " DB save time: " << tmr.elapsed();
+    }
+    return processed;
 }
 
 void SqLitePicPreview::StartAsyncPool()
 {
-    auto concur = std::thread::hardware_concurrency();
-    if (concur == m_atomTaskCnt) {
-        return;
+    if (m_tskCnt == m_atmTskCnt) {
+        return;		// all tasks running
     }
-    if (m_vFutures.empty()) {
-        for (unsigned int i = 0; i < concur; i++) {
-            m_vFutures.push_back(std::async(std::launch::async,
-                                            &SqLitePicPreview::AsyncResizeTask,
-                                            this));
-        }
-    } else {
-        for (unsigned int i = 0; i < concur; i++) {
-            auto status = m_vFutures[i].wait_for(std::chrono::seconds(0));
-            if (status == std::future_status::ready) {
-                m_vFutures[i].get();
-                m_vFutures[i] = std::async(std::launch::async,
-                                           &SqLitePicPreview::AsyncResizeTask,
-                                           this);
+    for (unsigned int i = 0; i < m_tskCnt; i++) {
+        using namespace std;
+        if (get<0>(m_vTsk[i]).valid()) {
+            using namespace chrono_literals;
+            auto st = get<0>(m_vTsk[i]).wait_for(0s);
+            if (st == future_status::ready) {
+                // get result of completed (new items are waiting in queue)
+                get<0>(m_vTsk[i]).get();
             }
+        }
+        try {
+            get<0>(m_vTsk[i]) = async(launch::async,
+                                      &SqLitePicPreview::AsyncResizeTask,
+                                      this, i);
+            m_atmTskCnt++;
+        } catch (std::exception &ex) {
+            LogOut(ex.what());
+            return;
         }
     }
 }
 
-void SqLitePicPreview::AsyncResizeTask() noexcept
+void SqLitePicPreview::AsyncResizeTask(unsigned int taskNumber) noexcept
 {
-    m_atomTaskCnt++;
-    //QElapsedTimer timer; qint64 elapMutex;
+    using namespace std;
+    int processed(0);
+    qCDebug(DBPreview) << taskNumber << "] Async task start";
     while (true) {
-        using namespace std;
-        previewItem *workItem(nullptr);
-        {
-            //timer.start();
-            lock_guard<mutex> guard(m_mutexQueueGuard);
-            //elapMutex = timer.elapsed();
-            if (m_deqFileNamesIn.empty()) {
-                break;
-            }
-            auto strFileName = m_deqFileNamesIn.front();
-            m_deqFileNamesIn.pop_front();
+        if (!get<1>(m_vTsk[taskNumber]).empty()) {
+            // process item from task buffer
+            auto workItem = get<1>(m_vTsk[taskNumber]).front();
+            get<1>(m_vTsk[taskNumber]).pop_front();
+            get<3>(*workItem) = ResizeImage(m_strWDPath + get<0>(*workItem),
+                                            get<1>(*workItem));
+            *get<2>(*workItem) = true;	// mark item as ready
+            processed++;
+            continue;
+        }
+        // task buffer is empty - fill it:
+        lock_guard<mutex> guard(m_mutexQueueGuard);
+        if (m_deqFNamesIn.empty()) {
+            Q_ASSERT(m_atmItemInQueueCnt == 0);
+            break;
+        }
+        for (unsigned int i = 0; i < m_tskBufItemCnt; i++) {
+            auto strFileName = m_deqFNamesIn.front();
+            m_deqFNamesIn.pop_front();
+            m_atmItemInQueueCnt--;
             auto pAtmcReady = shared_ptr<atomic_bool>(new atomic_bool(false));
             m_deqPreviewsOut.push_back(previewItem(strFileName, QByteArray(),
                                                    pAtmcReady, QString()));
-            workItem = &m_deqPreviewsOut.back();
+            get<1>(m_vTsk[taskNumber]).push_back(&m_deqPreviewsOut.back());
+            if (m_deqFNamesIn.empty()) {
+                break;
+            }
         }
-        //timer.start();
-        get<3>(*workItem) = ResizeImage(m_strWDPath + get<0>(*workItem),
-                                        get<1>(*workItem));
-        //qDebug() << elapMutex << " and resize" << timer.elapsed();
-        *get<2>(*workItem) = true;
     }
-    m_atomTaskCnt--;
+    qCDebug(DBPreview) << taskNumber << "] Async task exit Items processed:"
+                       << processed;
+    Q_ASSERT(m_atmItemInQueueCnt == 0);
+    m_atmTskCnt--;
 }
 
-QString ResizeImage(const QString &strFilePath, QByteArray &retPreview)
+QString ResizeImage(const QString &strFilePath,
+                    QByteArray &retPreview)
 {
     QImage img;
     QImageReader imgReader(strFilePath);

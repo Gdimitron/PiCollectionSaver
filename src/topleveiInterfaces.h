@@ -89,7 +89,8 @@ extern QSharedPointer<ISerialPicsDownloader> ISerPicsDownloaderCtr(
 struct ISqLitePicPreview
 {
     virtual bool GetPreview(const QString &strFile,
-                                 QByteArray &retPreview) = 0;
+                            QByteArray &retPreview,
+                            bool bWaitReady = false) = 0;
     virtual void AddNotExistRange(const QStringList &lstFileNames,
                                   QStringList::const_iterator itFrom) = 0;
     virtual ~ISqLitePicPreview() {}

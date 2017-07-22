@@ -6,7 +6,7 @@
 PreviewPicTable::PreviewPicTable(QTextBrowser *pTextBrows)
     : m_imgMode(modeDocResourcesImg), m_pTextBrows(pTextBrows),
       m_tCursor(m_pTextBrows->textCursor()), m_bUseBlockCache(false),
-      m_CacheBlockCntThresholdInitial(5),
+      m_CacheBlockCntThresholdInitial(2),
       m_CacheBlockCntThreshold(m_CacheBlockCntThresholdInitial),
       m_CacheBlockCnt(0)
 {
