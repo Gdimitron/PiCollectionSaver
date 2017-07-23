@@ -67,7 +67,10 @@ private:
     QByteArray GetPreviewFromDB(const QString &strFile);
     QStringList GetAbsentFrom(const QStringList &lstFileNames);
 
-    void InsertInDBPrevCache(const QString& fName, const QByteArray& pic);
+    void InsertInDBPrevCache(const QString& fName,
+                             const QByteArray& pic) {
+        m_DBPrevCache.insert(std::make_pair(fName, pic));
+    }
     QByteArray GetFromDBPrevCache(const QString& fName) {
         auto it = m_DBPrevCache.find(fName);
         if (it != m_DBPrevCache.end()) { return (*it).second; }

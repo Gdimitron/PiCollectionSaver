@@ -81,6 +81,7 @@ SqLitePicPreview::SqLitePicPreview(IMainLog *pLog,
                                    IWorkDir *pWorkDir)
     : m_pLog(pLog), m_pWorkDir(pWorkDir)
 {
+    m_DBPrevCache.max_load_factor(0.7);
 }
 
 SqLitePicPreview::~SqLitePicPreview()
@@ -238,29 +239,6 @@ QStringList SqLitePicPreview::GetAbsentFrom(const QStringList &lstFileNames)
     return retVal;
 }
 
-void SqLitePicPreview::InsertInDBPrevCache(const QString &fName,
-                                           const QByteArray &pic)
-{
-    m_DBPrevCache.insert(std::make_pair(fName, pic));
-    if (DBPreview().isDebugEnabled()){
-        static int dbg_cnt = 0;		// dump unordered_map stats
-        if (dbg_cnt++ % 150 == 0) {
-            qCDebug(DBPreview) << "m_DBPrevCache sz: " << m_DBPrevCache.size()
-                 << " load_factor: " << m_DBPrevCache.load_factor()
-                 << " bucket_count: " << m_DBPrevCache.bucket_count();
-
-            std::unordered_map<unsigned long, int> bucket_distribution;
-            for (unsigned int i = 0; i < m_DBPrevCache.bucket_count(); i++) {
-                bucket_distribution[m_DBPrevCache.bucket_size(i)]++;
-            }
-            for (unsigned long i = 0; i < bucket_distribution.size(); i++) {
-                qCDebug(DBPreview) << i << "element(s) in bucket: "
-                                   << bucket_distribution[i];
-            }
-        }
-    }
-}
-
 bool SqLitePicPreview::IsPreviewReady(const QString& strFileName) {
     std::lock_guard<std::mutex> guard(m_mutexQueueGuard);
     auto isInInputQueue = std::find(m_deqFNamesIn.begin(), m_deqFNamesIn.end(),
@@ -320,12 +298,7 @@ int SqLitePicPreview::ProcessReady(int iMaxToProcess)
         }
     }
     if (processed) {
-        QElapsedTimer tmr; if (DBPreview().isDebugEnabled()) { tmr.start(); }
-
         DBAddPreviews(vAddToDB);
-
-        qCDebug(DBPreview) << "Items add to DB: " << vAddToDB.size()
-                           << " DB save time: " << tmr.elapsed();
     }
     return processed;
 }
