@@ -13,9 +13,9 @@ const QString c_strLstActvTime          	=	"LastActivityTime";
 //const QString c_strLstActvTimeProcessed	=	"LastActivityTimeProcessed";
 const QString c_strFavClmn              	=	"Favorite";
 
-QSharedPointer<ISqLiteManager> ISqLiteManagerCtr(
-        const QString &strDBFileName, const QString &strTableName,
-        IMainLog *pLog)
+QSharedPointer<ISqLiteManager> ISqLiteManagerCtr(const QString &strDBFileName,
+                                                 const QString &strTableName,
+                                                 IMainLog *pLog)
 {
     QSharedPointer<ISqLiteManager> retVal(
                 new CSqLiteManager(strDBFileName, strTableName, pLog));
@@ -23,7 +23,8 @@ QSharedPointer<ISqLiteManager> ISqLiteManagerCtr(
 }
 
 CSqLiteManager::CSqLiteManager(const QString &strDBFileName,
-                               const QString &strTableName, IMainLog *pLog)
+                               const QString &strTableName,
+                               IMainLog *pLog)
     : m_strTableName(strTableName), m_pLog(pLog), m_iReturnedIndex(0)
 {
     m_pSqLiteDB = std::make_shared<QSqlDatabase>(
@@ -112,7 +113,9 @@ void CSqLiteManager::AddNewUser(const QString & strUserName,
 
 
 QMap<QString, QString> CSqLiteManager::GetFirstAllUsersIdActivityTime(
-        int iCountMax, bool bFavoriteOnly, bool bEmptyActivityTimeOnly)
+        int iCountMax,
+        bool bFavoriteOnly,
+        bool bEmptyActivityTimeOnly)
 {
     m_iReturnedIndex = 0;
     return GetAllUsersIdActivityTimeImpl(iCountMax, bFavoriteOnly,
@@ -121,7 +124,9 @@ QMap<QString, QString> CSqLiteManager::GetFirstAllUsersIdActivityTime(
 
 
 QMap<QString, QString> CSqLiteManager::GetNextAllUsersIdActivityTime(
-        int iCountMax, bool bFavoriteOnly, bool bEmptyActivityTimeOnly)
+        int iCountMax,
+        bool bFavoriteOnly,
+        bool bEmptyActivityTimeOnly)
 {
     return GetAllUsersIdActivityTimeImpl(iCountMax, bFavoriteOnly,
                                          bEmptyActivityTimeOnly);
@@ -129,7 +134,9 @@ QMap<QString, QString> CSqLiteManager::GetNextAllUsersIdActivityTime(
 
 
 QMap<QString, QString> CSqLiteManager::GetAllUsersIdActivityTimeImpl(
-        int iCountMax, bool bFavoriteOnly, bool bEmptyActivityTimeOnly)
+        int iCountMax,
+        bool bFavoriteOnly,
+        bool bEmptyActivityTimeOnly)
 {
     QMap<QString, QString> mapRes;
 
